@@ -368,8 +368,9 @@ function setLangMode(m){
     langMode=m;
     document.getElementById('mode-translate').className='px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(m==='translate'?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
     document.getElementById('mode-generate').className='px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(m==='generate'?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
-    document.getElementById('lang-input').placeholder=m==='translate'?'Wort oder Satz eingeben...':'';
-    document.getElementById('lang-input-area').style.display=m==='translate'?'block':'none';
+    const btn=document.getElementById('lang-btn');
+    if(m==='generate'){btn.textContent='Generieren';document.getElementById('lang-input-area').style.display='none';}
+    else{btn.textContent='Übersetzen';document.getElementById('lang-input-area').style.display='block';}
 }
 
 async function generateLang(){
@@ -380,7 +381,7 @@ async function generateLang(){
     const body={target_lang,level:langLevel,mode:langMode};
     if(langMode==='translate')body.text=text;
     const res=await api('/api/language/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    toggleUI('lang','Übersetzen',true);
+    toggleUI('lang',langMode==='generate'?'Generieren':'Übersetzen',true);
     if(!res.ok){showError('lang',res.data.error);return;}
     langData=res.data;
     document.getElementById('lang-result').classList.remove('hidden');

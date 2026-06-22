@@ -198,21 +198,21 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 - [✓] **T2.3:** Frontend — Tags an Karten anzeigen (in der Library-Ansicht). Tag-Verwaltung-UI (Hinzufügen/Entfernen) ggf. noch ergänzbar.
 
 ### Phase 3: Language Mode (Backend + Frontend)
-- [ ] **T3.1:** `ai.py` — Sprach-Prompt (translate + generate) je Stufe einfach/mittel/fortgeschritten.
-- [ ] **T3.2:** `POST /api/language/generate` + DB-CRUD für `language_cards`.
-- [ ] **T3.3:** `GET/POST /api/language/cards`, `due`, `review`, `DELETE` (SM-2 wiederverwenden).
-- [ ] **T3.4:** Frontend — neuer Tab „Sprachen": Eingabe, Stufenwahl, Zielsprache, Speichern, eigener Review-Flow.
+- [✓] **T3.1:** `ai.py` — Sprach-Prompt (translate + generate) je Stufe einfach/mittel/fortgeschritten. Translate-Richtung korrigiert (DE→Zielsprache). Few-Shot-Beispiele je Stufe ergänzt.
+- [✓] **T3.2:** `POST /api/language/generate` + DB-CRUD für `language_cards`.
+- [✓] **T3.3:** `GET/POST /api/language/cards`, `due`, `review`, `DELETE` (SM-2 wiederverwendet).
+- [✓] **T3.4:** Frontend — neuer Tab „Sprachen": Eingabe, Stufenwahl, Zielsprache, Speichern, eigener Review-Flow.
 
 ### Phase 4: Random Mode
-- [ ] **T4.1:** `ai.py` — Prompt „wähle Thema aus Kategorie".
-- [ ] **T4.2:** `POST /api/random` → Thema + Titel + 3 Erklärungen.
-- [ ] **T4.3:** Frontend — Button „Zufälliges Thema" + Kategorie-Eingabe, Ergebnis wie normale Erklärungsauswahl.
+- [✓] **T4.1:** `ai.py` — Prompt „wähle Thema aus Kategorie".
+- [✓] **T4.2:** `POST /api/random` → Thema + Titel + 3 Erklärungen.
+- [✓] **T4.3:** Frontend — Button „Zufälliges Thema" + Kategorie-Eingabe, Ergebnis wie normale Erklärungsauswahl.
 
 ### Phase 5: Library-Rework (Search, Filter, Sort)
-- [ ] **T5.1:** Suchfeld (Volltext clientseitig über Titel/Topic/Erklärung).
-- [ ] **T5.2:** Tag-Filter (Multiple Select).
-- [ ] **T5.3:** Sortierung (Erstelldatum / nächster Review / Level).
-- [ ] **T5.4:** Anzeige: Titel, Tags, Level, nächster Review je Eintrag.
+- [✓] **T5.1:** Suchfeld (Volltext clientseitig über Titel/Topic/Erklärung).
+- [✓] **T5.2:** Tag-Filter (Multiple Select).
+- [✓] **T5.3:** Sortierung (Erstelldatum / nächster Review / Level).
+- [✓] **T5.4:** Anzeige: Titel, Tags, Level, nächster Review je Eintrag.
 
 ### Phase 6: Polish (PWA, Performance, Mobile)
 - [ ] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
@@ -229,6 +229,6 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 
 ## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzte Aktualisierung:** 22.06.2026 (Cron-Run: DB-Migration + Status-Update)
-**Aktuelle Phase:** 3 (Language Mode) — Phasen 0–2 abgeschlossen
-**Nächster Task:** T3.1 — `ai.py`: Sprach-Prompt (translate + generate) je Stufe einfach/mittel/fortgeschritten
+**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T3.1 verbessert — Few-Shot-Beispiele, Translate-Richtung korrigiert)
+**Aktuelle Phase:** 6 (PWA) — Phasen 0–5 abgeschlossen
+**Nächster Task:** T6.1 — `sw.js` Service Worker für PWA erstellen

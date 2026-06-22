@@ -188,7 +188,8 @@ def get_all_cards():
     for r in rows:
         d = dict(r)
         d['tags'] = d.pop('tag_names').split(',') if d.get('tag_names') else []
-        return result
+        result.append(d)
+    return result
 
 def get_due_cards():
     conn = get_db()

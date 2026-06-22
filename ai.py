@@ -42,15 +42,69 @@ Wenn die Kategorie "Gemüse" ist, wähle z.B. "Radieschen" oder "Brokkoli", nich
 Gib deine Antwort NUR als JSON (kein Markdown, kein Code-Block):
 {{"topic": "Das gewählte Thema", "title": "Prägnanter Titel (max 6 Wörter)", "kurz": "...", "kompakt": "...", "ausfuehrlich": "..."}}"""
 
-LANGUAGE_PROMPT = """Du bist ein Sprachtrainer für {target_lang}.
+LANGUAGE_TRANSLATE_PROMPT = """Du bist ein Sprachtrainer für {target_lang}. Übersetze den folgenden deutschen Text.
 
-Modus: {mode}
 Stufe: {level}
 
-{mode_instructions}
+## Stufen-Anforderungen
 
-Gib deine Antwort NUR als JSON (kein Markdown, kein Code-Block):
-{{"source_text": "...", "target_text": "..."}}"""
+### Einfach (A1-A2)
+- Grundwortschatz (max 500 häufigste Wörter).
+- Kurze, einfache Sätze (Subjekt-Prädikat-Objekt, keine Nebensätze).
+- Keine Idiome, keine Passivkonstruktionen.
+- Gut-Beispiel (DE→EN, "einfach"):
+  Eingabe: "Ich möchte ein Glas Wasser bestellen."
+  Ausgabe: {{"source_text": "Ich möchte ein Glas Wasser bestellen.", "target_text": "I would like to order a glass of water."}}
+
+### Mittel (B1-B2)
+- Alltagssprache mit Nebensätzen (weil, obwohl, dass).
+- Module Hilfsverben, Konjunktiv II, typische Phrasen.
+- Keine fachspezifischen Begriffe oder seltene Idiome.
+- Gut-Beispiel (DE→EN, "mittel"):
+  Eingabe: "Obwohl es geregnet hat, bin ich trotzdem zum Training gegangen."
+  Ausgabe: {{"source_text": "Obwohl es geregnet hat, bin ich trotzdem zum Training gegangen.", "target_text": "Although it was raining, I still went to the training session."}}
+
+### Fortgeschritten (C1-C2)
+- Komplexe Satzstrukturen (Schachtelsätze, Partizipialkonstruktionen).
+- Differenziertes Vokabular, Kollokationen, Nuancierungen.
+- Auch idiomatische Wendungen und fachspezifische Begriffe, wenn zum Thema passend.
+- Gut-Beispiel (DE→EN, "fortgeschritten"):
+  Eingabe: "Die wirtschaftlichen Verflechtungen zwischen den beiden Ländern haben sich in den letzten Jahrzehnten zunehmend diversifiziert."
+  Ausgabe: {{"source_text": "Die wirtschaftlichen Verflechtungen zwischen den beiden Ländern haben sich in den letzten Jahrzehnten zunehmend diversifiziert.", "target_text": "The economic interconnections between the two countries have become increasingly diversified over the past decades."}}
+
+Text zum Übersetzen:
+{text}
+
+Antworte NUR als JSON: {{"source_text": "Deutscher Originaltext", "target_text": "{target_lang}-Übersetzung (dem Niveau angepasst)"}}"""
+
+LANGUAGE_GENERATE_PROMPT = """Du bist ein Sprachtrainer für {target_lang}. Generiere einen Satz auf {target_lang} mit deutscher Übersetzung.
+
+Stufe: {level}
+
+## Stufen-Anforderungen
+
+### Einfach (A1-A2)
+- Grundwortschatz, kurze Sätze (3-8 Wörter).
+- Alltagsthemen (Essen, Wetter, Familie, Einkaufen, Hobbys).
+- Keine Idiome, keine komplexe Grammatik.
+- Gut-Beispiel (FR, "einfach"):
+  Ausgabe: {{"source_text": "Le chat est sur la table.", "target_text": "Die Katze ist auf dem Tisch."}}
+
+### Mittel (B1-B2)
+- Alltagssituationen (Arztbesuch, Reiseplanung, Smalltalk, Bewerbung).
+- Nebensätze, zusammengesetzte Satzstrukturen.
+- Typische Redemittel für die Situation.
+- Gut-Beispiel (ES, "mittel"):
+  Ausgabe: {{"source_text": "Aunque no tengo mucha experiencia, estoy seguro de que puedo aprender rápido si me dan la oportunidad.", "target_text": "Obwohl ich nicht viel Erfahrung habe, bin ich mir sicher, dass ich schnell lernen kann, wenn man mir die Chance gibt."}}
+
+### Fortgeschritten (C1-C2)
+- Komplexe, abstrakte Themen (Politik, Wirtschaft, Wissenschaft, Kultur).
+- Differenzierte Argumentation, hypothetische Konstruktionen.
+- Fachvokabular und nuancierte Ausdrucksweise.
+- Gut-Beispiel (EN, "fortgeschritten"):
+  Ausgabe: {{"source_text": "The government's proposed fiscal policy, while ostensibly aimed at stimulating economic growth, fails to address the underlying structural issues that have long plagued the manufacturing sector.", "target_text": "Die vorgeschlagene Fiskalpolitik der Regierung zielt zwar vordergründig auf die Ankurbelung des Wirtschaftswachstums ab, versäumt es jedoch, die strukturellen Probleme anzugehen, die den Fertigungssektor seit Langem plagen."}}
+
+Antworte NUR als JSON: {{"source_text": "Generierter {target_lang}-Satz", "target_text": "Deutsche Übersetzung"}}"""
 
 
 def _call_openrouter(prompt, system=SYSTEM_PROMPT, max_tokens=1500):
@@ -164,19 +218,15 @@ def generate_language(text, target_lang='en', level='einfach', mode='translate')
         oder None bei Fehler
     """
     if mode == 'translate':
-        mode_instructions = f"Übersetze den folgenden {target_lang}-Text ins Deutsche. Bei jedem Niveau soll die Übersetzung dem Sprachniveau angepasst sein:\n\n{text}"
+        prompt = LANGUAGE_TRANSLATE_PROMPT.format(
+            target_lang=target_lang, level=level, text=text
+        )
     else:
-        if level == 'einfach':
-            mode_instructions = f"Generiere einen einfachen Satz auf {target_lang} (Grundwortschatz, kurze Sätze) mit deutscher Übersetzung."
-        elif level == 'mittel':
-            mode_instructions = f"Generiere einen mittelschweren Satz auf {target_lang} (Alltagssituationen, zusammengesetzte Sätze) mit deutscher Übersetzung."
-        else:
-            mode_instructions = f"Generiere einen anspruchsvollen Satz auf {target_lang} (komplexe Satzstrukturen, Fachvokabular, Niveau C1-C2) mit deutscher Übersetzung."
+        prompt = LANGUAGE_GENERATE_PROMPT.format(
+            target_lang=target_lang, level=level
+        )
     
-    result = _call_openrouter(LANGUAGE_PROMPT.format(
-        target_lang=target_lang, level=level, mode=mode,
-        mode_instructions=mode_instructions
-    ), max_tokens=1000)
+    result = _call_openrouter(prompt, max_tokens=1000)
     
     if result is None:
         return None
