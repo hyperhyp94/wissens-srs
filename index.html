@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wissens-SRS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#2563eb' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:top-0 md:bottom-auto md:border-b md:border-t-0 z-50">
+        <div class="flex justify-around md:justify-start md:max-w-5xl md:mx-auto md:px-4">
+            <a href="#dashboard" class="nav-link flex flex-col items-center py-2 px-4 text-primary min-w-[64px] min-h-[44px] justify-center" data-page="dashboard">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span class="text-[10px] mt-1">Start</span>
+            </a>
+            <a href="#review" class="nav-link flex flex-col items-center py-2 px-4 text-gray-500 min-w-[64px] min-h-[44px] justify-center" data-page="review">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span class="text-[10px] mt-1">Lernen</span>
+            </a>
+            <a href="#library" class="nav-link flex flex-col items-center py-2 px-4 text-gray-500 min-w-[64px] min-h-[44px] justify-center" data-page="library">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <span class="text-[10px] mt-1">Bibliothek</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content" class="max-w-5xl mx-auto px-4 py-8 pb-20 md:pt-20 md:pb-8">
+        <!-- Dashboard Page -->
+        <div id="page-dashboard" class="page">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">📚 Wissens-SRS</h1>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
+                    <div class="text-3xl font-bold text-primary" id="stat-total">0</div>
+                    <div class="text-xs text-gray-500 mt-1">Karten</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
+                    <div class="text-3xl font-bold text-orange-500" id="stat-due">0</div>
+                    <div class="text-xs text-gray-500 mt-1">Fällig</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center col-span-2 md:col-span-1">
+                    <div class="text-3xl font-bold text-green-500" id="stat-avg">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Ø Bewertung</div>
+                </div>
+            </div>
+
+            <!-- New Topic Input -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Neues Thema</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="topic-input"
+                        class="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="z.B. Wie entsteht eine Wolke?"
+                        minlength="3">
+                    <button id="generate-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg whitespace-nowrap min-h-[44px] min-w-[44px]">
+                        Erklären
+                    </button>
+                </div>
+                <div id="explanations-area" class="mt-4 hidden">
+                    <!-- Erklärungen erscheinen hier -->
+                </div>
+            </div>
+
+            <!-- Due Cards -->
+            <div id="due-cards-section" class="mt-8 hidden">
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">🔔 Heute fällig</h2>
+                <div id="due-cards-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Review Page -->
+        <div id="page-review" class="page hidden">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">📖 Lernen</h1>
+            <div id="review-container">
+                <p class="text-gray-500">Keine Karten zum Wiederholen.</p>
+            </div>
+        </div>
+
+        <!-- Library Page -->
+        <div id="page-library" class="page hidden">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">📚 Bibliothek</h1>
+            <div id="library-container">
+                <p class="text-gray-500">Noch keine Karten.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    // Navigation
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            showPage(page);
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.replace('text-primary', 'text-gray-500'));
+            link.classList.replace('text-gray-500', 'text-primary');
+        });
+    });
+
+    function showPage(name) {
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        const page = document.getElementById('page-' + name);
+        if (page) page.classList.remove('hidden');
+    }
+
+    // Load initial data
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/stats');
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('stat-total').textContent = data.total || 0;
+                document.getElementById('stat-due').textContent = data.due || 0;
+                document.getElementById('stat-avg').textContent = data.avg_rating ? data.avg_rating.toFixed(1) : '-';
+            }
+        } catch(e) {
+            console.log('Stats not loaded (backend may not be ready)');
+        }
+    }
+
+    loadStats();
+    showPage('dashboard');
+    </script>
+</body>
+</html>
