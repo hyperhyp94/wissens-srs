@@ -180,7 +180,7 @@ def sm2(card, rating):
 - [✓] **T8.3:** Karte löschen können
 
 ### Phase 9: Polish & Testing
-- [~] **T9.1:** Responsive Design verfeinern (iPhone SE 375px)
+- [✓] **T9.1:** Responsive Design verfeinern (iPhone SE 375px)
 - [ ] **T9.2:** Dark Mode? (optional)
 - [ ] **T9.3:** Alle Edge Cases testen
 - [ ] **T9.4:** Performance: DB-Indizes prüfen
