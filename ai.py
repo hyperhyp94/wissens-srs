@@ -21,7 +21,7 @@ JEDE Erklärung muss INHALTLICH KORREKT sein und WIRKLICH erklären, worum es ge
 
 Thema: {topic}
 
-## easy (Kinderleicht — für 10-Jährige verständlich)
+## easy (Einfach — für jedes Kind verständlich)
 - Benutze einfache, klare Sprache (kein Baby-Talk)
 - Erkläre den KERN des Themas in 3-4 Sätzen
 - Nutze ein konkretes Beispiel oder einen Vergleich aus der Lebenswelt eines Kindes
@@ -29,14 +29,14 @@ Thema: {topic}
 - Gut: "Wolken entstehen, weil warme Luft aufsteigt. Oben ist es kälter und die Luft kann das Wasser nicht mehr halten. Das Wasser wird zu winzigen Tröpfchen — das sind Wolken."
 - Schlecht: "Stell dir vor, du bist eine Wolke und schwebst am Himmel."
 
-## abitur (Abitur-Niveau — für Oberstufenschüler)
+## gruendlich (Gründlich — etwas spezifischer)
 - Verwende Fachbegriffe und erkläre sie kurz
 - Beschreibe den PROZESS oder MECHANISMUS in 5-8 Sätzen
 - Zeige Ursache-Wirkungs-Ketten auf
 - Gib Kontext: Warum ist das relevant? Wo kommt das vor?
 - Gut: "Bei der Wolkenbildung steigt feuchtwarme Luft durch Konvektion auf. Mit zunehmender Höhe sinkt der Luftdruck, die Luft expandiert und kühlt adiabatisch ab. Erreicht sie den Taupunkt, kondensiert der Wasserdampf an Kondensationskeimen..."
 
-## professor (Universitäts-Niveau — wissenschaftlich präzise)
+## experte (Experten-Niveau — wissenschaftlich präzise)
 - Höchste wissenschaftliche Genauigkeit mit Fachterminologie
 - 8-12 Sätze mit tiefgehender Analyse
 - Beziehe aktuelle Forschung, Modelle oder Theorien ein
@@ -45,7 +45,7 @@ Thema: {topic}
 - Gut: "Die Wolkenmikrophysik beschreibt die Kondensation von Wasserdampf an Aerosolpartikeln (cloud condensation nuclei, CCN). Der Köhler-Theorie folgend ist der Sättigungsdampfdruck über einer gekrümmten Oberfläche erhöht..."
 
 Gib deine Antwort als JSON-Objekt zurück:
-{{"easy": "...", "abitur": "...", "professor": "..."}}"""
+{{"easy": "...", "gruendlich": "...", "experte": "..."}}"""
 
 
 def _call_openrouter(topic):
@@ -103,7 +103,7 @@ def _generate_dummy(topic):
             f'ähnlich wie ein Rezept, bei dem mehrere Zutaten zusammenwirken. '
             f'Deshalb ist es spannend, mehr darüber zu erfahren!'
         ),
-        "abitur": (
+        "gruendlich": (
             f'Das Thema „{topic}" umfasst mehrere miteinander verbundene Aspekte. '
             f'Zum einen spielen physikalische oder gesellschaftliche Grundkräfte eine Rolle, '
             f'zum anderen sind Wechselwirkungen zwischen den beteiligten Elementen entscheidend. '
@@ -112,7 +112,7 @@ def _generate_dummy(topic):
             f'die in der Fachliteratur gut dokumentiert sind. '
             f'Für das Verständnis ist es wichtig, zwischen Ursache und Wirkung zu unterscheiden.'
         ),
-        "professor": (
+        "experte": (
             f'Eine fundierte wissenschaftliche Analyse des Themas „{topic}" erfordert '
             f'die Berücksichtigung mehrerer Theorieebenen. Auf der Mikroebene sind '
             f'die zugrundeliegenden Elementarprozesse zu identifizieren, während auf '
@@ -149,7 +149,7 @@ def generate_explanations(topic):
         result = _generate_dummy(topic)
     
     # 4. Validieren: alle 3 Level müssen vorhanden sein
-    for level in ['easy', 'abitur', 'professor']:
+    for level in ['easy', 'gruendlich', 'experte']:
         if level not in result or not result[level] or len(result[level]) < 50:
             result[level] = _generate_dummy(topic)[level]
     

@@ -25,7 +25,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             topic TEXT NOT NULL,
             explanation TEXT NOT NULL,
-            level TEXT NOT NULL CHECK(level IN ('easy','abitur','professor')),
+            level TEXT NOT NULL CHECK(level IN ('easy','gruendlich','experte')),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             -- SRS Felder (SM-2)
             ease_factor REAL DEFAULT 2.5,
@@ -42,7 +42,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             topic TEXT NOT NULL,
             topic_hash TEXT NOT NULL,
-            level TEXT NOT NULL CHECK(level IN ('easy','abitur','professor')),
+            level TEXT NOT NULL CHECK(level IN ('easy','gruendlich','experte')),
             explanation TEXT NOT NULL,
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(topic_hash, level)

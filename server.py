@@ -68,8 +68,8 @@ def api_cards():
         if not all([topic, explanation, level]):
             return jsonify({"error": "topic, explanation und level sind Pflicht"}), 400
         
-        if level not in ("easy", "abitur", "professor"):
-            return jsonify({"error": "level muss easy, abitur oder professor sein"}), 400
+        if level not in ("easy", "gruendlich", "experte"):
+            return jsonify({"error": "level muss easy, gruendlich oder experte sein"}), 400
         
         from database import create_card
         card = create_card(topic, explanation, level)
