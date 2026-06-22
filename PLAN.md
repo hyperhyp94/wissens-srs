@@ -122,62 +122,62 @@ def sm2(card, rating):
 ## Bauphasen & Tasks
 
 ### Phase 0: Projekt-Grundgerüst
-- [ ] **T0.1:** `server.py` mit Flask-Grundgerüst (alle Routen als Stubs)
-- [ ] **T0.2:** `index.html` Grundgerüst (leere Seite mit Nav)
-- [ ] **T0.3:** `META.json` anlegen
-- [ ] **T0.4:** `requirements.txt` (flask)
-- [ ] **T0.5:** Server starten, curl-Test: HTTP 200
+- [✓] **T0.1:** `server.py` mit Flask-Grundgerüst (alle Routen als Stubs)
+- [✓] **T0.2:** `index.html` Grundgerüst (leere Seite mit Nav)
+- [✓] **T0.3:** `META.json` anlegen
+- [✓] **T0.4:** `requirements.txt` (flask)
+- [✓] **T0.5:** Server starten, curl-Test: HTTP 200
 
 ### Phase 1: Datenbank & Datenmodell
-- [ ] **T1.1:** `database.py` — SQLite-Init, `init_db()` Funktion, Tabellen erstellen
-- [ ] **T1.2:** `database.py` — CRUD-Funktionen für cards (create, get_all, get_due, get_by_id, update, delete)
-- [ ] **T1.3:** `database.py` — Funktionen für explanations (save, get_by_topic)
-- [ ] **T1.4:** `database.py` — Funktion für review_log (add_entry)
-- [ ] **T1.5:** Test: DB wird bei Serverstart initialisiert
+- [✓] **T1.1:** `database.py` — SQLite-Init, `init_db()` Funktion, Tabellen erstellen
+- [✓] **T1.2:** `database.py` — CRUD-Funktionen für cards (create, get_all, get_due, get_by_id, update, delete)
+- [✓] **T1.3:** `database.py` — Funktionen für explanations (save, get_by_topic)
+- [✓] **T1.4:** `database.py` — Funktion für review_log (add_entry)
+- [✓] **T1.5:** Test: DB wird bei Serverstart initialisiert
 
 ### Phase 2: SRS-Algorithmus
-- [ ] **T2.1:** `srs.py` — `sm2(card, rating)` Funktion
-- [ ] **T2.2:** `srs.py` — Unit-Test mit bekannten SM-2 Werten
-- [ ] **T2.3:** Integration in API: Review-Endpoint nutzt sm2()
+- [✓] **T2.1:** `srs.py` — `sm2(card, rating)` Funktion
+- [✓] **T2.2:** `srs.py` — Unit-Test mit bekannten SM-2 Werten
+- [✓] **T2.3:** Integration in API: Review-Endpoint nutzt sm2()
 
 ### Phase 3: KI-Erklärungsgenerierung
-- [ ] **T3.1:** `ai.py` — `generate_explanations(topic)` via OpenRouter API
-- [ ] **T3.2:** Prompt-Engineering: 3 Niveaustufen (Kinderleicht, Abitur, Professor)
-- [ ] **T3.3:** Fallback: Wenn API-Key fehlt → Dummy-Erklärungen (damit App testbar bleibt)
-- [ ] **T3.4:** `/api/generate` Endpoint implementieren
+- [✓] **T3.1:** `ai.py` — `generate_explanations(topic)` via OpenRouter API
+- [✓] **T3.2:** Prompt-Engineering: 3 Niveaustufen (Kinderleicht, Abitur, Professor)
+- [✓] **T3.3:** Fallback: Wenn API-Key fehlt → Dummy-Erklärungen (damit App testbar bleibt)
+- [✓] **T3.4:** `/api/generate` Endpoint implementieren
 
 ### Phase 4: API-Endpunkte (echte Implementierung)
-- [ ] **T4.1:** `POST /api/generate` — nimmt Topic, ruft KI, speichert Explanations, returned sie
-- [ ] **T4.2:** `GET /api/explanations` — cached Explanations für Topic zurückgeben
-- [ ] **T4.3:** `POST /api/cards` — Karte aus selektierter Explanation erstellen
-- [ ] **T4.4:** `GET /api/cards/due` — alle heute fälligen Karten
-- [ ] **T4.5:** `POST /api/cards/<id>/review` — Review mit SM-2
-- [ ] **T4.6:** `GET /api/stats` — Statistiken
-- [ ] **T4.7:** Alle Endpunkte mit curl durchtesten
+- [✓] **T4.1:** `POST /api/generate` — nimmt Topic, ruft KI, speichert Explanations, returned sie
+- [✓] **T4.2:** `GET /api/explanations` — cached Explanations für Topic zurückgeben
+- [✓] **T4.3:** `POST /api/cards` — Karte aus selektierter Explanation erstellen
+- [✓] **T4.4:** `GET /api/cards/due` — alle heute fälligen Karten
+- [✓] **T4.5:** `POST /api/cards/<id>/review` — Review mit SM-2
+- [✓] **T4.6:** `GET /api/stats` — Statistiken
+- [✓] **T4.7:** Alle Endpunkte mit curl durchtesten
 
 ### Phase 5: Frontend — Dashboard
-- [ ] **T5.1:** Dashboard-Layout: Stats-Karten oben, "Neues Thema"-Input
-- [ ] **T5.2:** Stats live von `/api/stats` laden
-- [ ] **T5.3:** "Fällige Karten"-Sektion (falls due > 0)
-- [ ] **T5.4:** Mobile-optimiert (Bottom-Nav)
+- [✓] **T5.1:** Dashboard-Layout: Stats-Karten oben, "Neues Thema"-Input
+- [✓] **T5.2:** Stats live von `/api/stats` laden
+- [✓] **T5.3:** "Fällige Karten"-Sektion (falls due > 0)
+- [✓] **T5.4:** Mobile-optimiert (Bottom-Nav)
 
 ### Phase 6: Frontend — Erklärungsauswahl
-- [ ] **T6.1:** Nach Themeneingabe: Loading-Spinner, dann 3 Erklärungskarten
-- [ ] **T6.2:** Jede Karte zeigt: Level-Label, Erklärungstext, "Auswählen"-Button
-- [ ] **T6.3:** Bei Auswahl: Karte wird per API erstellt, Redirect zum Dashboard
-- [ ] **T6.4:** Error-Handling (API down, keine Erklärungen, etc.)
+- [✓] **T6.1:** Nach Themeneingabe: Loading-Spinner, dann 3 Erklärungskarten
+- [✓] **T6.2:** Jede Karte zeigt: Level-Label, Erklärungstext, "Auswählen"-Button
+- [✓] **T6.3:** Bei Auswahl: Karte wird per API erstellt, Redirect zum Dashboard
+- [✓] **T6.4:** Error-Handling (API down, keine Erklärungen, etc.)
 
 ### Phase 7: Frontend — Review-Modus
-- [ ] **T7.1:** Review-Seite: zeigt eine Karte (Erklärung lesen)
-- [ ] **T7.2:** Nach Lesen: "Aufdecken"-Button → Bewertungs-Buttons (0-5)
-- [ ] **T7.3:** Bei Bewertung: API-Call, nächste Karte laden
-- [ ] **T7.4:** "Keine weiteren Karten"-State
-- [ ] **T7.5:** Mobile: Swipe-Gesten? Oder große Tasten (44px+)
+- [✓] **T7.1:** Review-Seite: zeigt eine Karte (Erklärung lesen)
+- [✓] **T7.2:** Nach Lesen: "Aufdecken"-Button → Bewertungs-Buttons (0-5)
+- [✓] **T7.3:** Bei Bewertung: API-Call, nächste Karte laden
+- [✓] **T7.4:** "Keine weiteren Karten"-State
+- [✓] **T7.5:** Mobile: Swipe-Gesten? Oder große Tasten (44px+)
 
 ### Phase 8: Frontend — Bibliothek
-- [ ] **T8.1:** Alle Karten als Liste (Topic, Level, nächster Review)
-- [ ] **T8.2:** Suche/Filter (nach Topic, Level)
-- [ ] **T8.3:** Karte löschen können
+- [✓] **T8.1:** Alle Karten als Liste (Topic, Level, nächster Review)
+- [✓] **T8.2:** Suche/Filter (nach Topic, Level)
+- [✓] **T8.3:** Karte löschen können
 
 ### Phase 9: Polish & Testing
 - [ ] **T9.1:** Responsive Design verfeinern (iPhone SE 375px)
@@ -215,6 +215,6 @@ Thema: {topic}
 
 ## Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzter Run:** noch nie
-**Aktuelle Phase:** 0
-**Nächster Task:** T0.1
+**Letzter Run:** 22.06.2026 14:51 (manuell)
+**Aktuelle Phase:** 9 (Polish)
+**Nächster Task:** T9.1
