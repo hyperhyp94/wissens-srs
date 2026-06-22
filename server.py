@@ -31,6 +31,9 @@ def api_generate():
     if len(topic) < 3:
         return jsonify({"error": "Thema muss mindestens 3 Zeichen haben"}), 400
     
+    if len(topic) > 200:
+        return jsonify({"error": "Thema darf maximal 200 Zeichen haben"}), 400
+    
     from ai import generate_explanations
     result = generate_explanations(topic)
     

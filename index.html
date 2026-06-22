@@ -344,8 +344,8 @@ async function rateCard(rating) {
     
     if (res.ok) {
         currentReviewIndex++;
-        // Remove from dueCards
-        dueCards.splice(dueCards.indexOf(card), 1);
+        const idx = dueCards.indexOf(card);
+        if (idx !== -1) dueCards.splice(idx, 1);
         currentReviewIndex = Math.min(currentReviewIndex, dueCards.length);
         renderReviewCard();
         // Refresh dashboard stats in background
@@ -410,7 +410,7 @@ function escHtml(s) {
 }
 
 function escAttr(s) {
-    return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function levelLabel(level) {

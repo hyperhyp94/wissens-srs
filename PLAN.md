@@ -181,9 +181,9 @@ def sm2(card, rating):
 
 ### Phase 9: Polish & Testing
 - [✓] **T9.1:** Responsive Design verfeinern (iPhone SE 375px)
-- [ ] **T9.2:** Dark Mode? (optional)
-- [ ] **T9.3:** Alle Edge Cases testen
-- [ ] **T9.4:** Performance: DB-Indizes prüfen
+- [ ] **T9.2:** Dark Mode? (optional) — übersprungen (Cron-Job, optional)
+- [✓] **T9.3:** Alle Edge Cases testen — 23 Tests durchgeführt, 3 Bugs gefixed (escAttr, splice(-1), max topic length)
+- [✓] **T9.4:** Performance: DB-Indizes geprüft — 4 Indizes vorhanden, korrekt
 - [ ] **T9.5:** README.md schreiben
 
 ---
@@ -215,6 +215,6 @@ Thema: {topic}
 
 ## Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzter Run:** 22.06.2026 14:51 (manuell)
+**Letzter Run:** 22.06.2026 15:53 (Cron)
 **Aktuelle Phase:** 9 (Polish)
-**Nächster Task:** T9.1
+**Nächster Task:** T9.5
