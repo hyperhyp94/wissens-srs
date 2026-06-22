@@ -2,145 +2,171 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Wissens-SRS</title>
+    <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { primary: '#2563eb' }
-                }
-            }
-        }
-    </script>
+    <script>tailwind.config={theme:{extend:{colors:{primary:'#2563eb'}}}}</script>
+    <style>
+        .page{display:none}.page.active{display:block}
+        .swipe-area{-webkit-user-select:none;user-select:none}
+        .rating-btn:disabled{opacity:.4;pointer-events:none}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .fade-in{animation:fadeIn .2s ease-out}
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 
-    <!-- Top Bar (Desktop) -->
-    <header class="hidden md:block bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
+    <header class="hidden md:block bg-white border-b fixed top-0 left-0 right-0 z-40">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <h1 class="text-lg font-bold text-gray-900">📚 Wissens-SRS</h1>
-            <div class="flex gap-4" id="desktop-nav">
-                <button onclick="showPage('dashboard')" class="nav-btn text-sm font-medium text-primary" data-page="dashboard">🏠 Dashboard</button>
-                <button onclick="showPage('review')" class="nav-btn text-sm font-medium text-gray-400" data-page="review">📖 Lernen</button>
-                <button onclick="showPage('library')" class="nav-btn text-sm font-medium text-gray-400" data-page="library">📚 Bibliothek</button>
-            </div>
+            <div class="flex gap-1" id="desktop-nav"></div>
         </div>
     </header>
 
-    <!-- Mobile Bottom Nav -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
-        <div class="flex justify-around">
-            <button onclick="showPage('dashboard')" class="nav-btn flex flex-col items-center py-2 px-3 min-w-[64px] min-h-[44px] justify-center" data-page="dashboard">
-                <span class="text-lg">🏠</span>
-                <span class="text-[10px] mt-1">Start</span>
-            </button>
-            <button onclick="showPage('review')" class="nav-btn flex flex-col items-center py-2 px-3 min-w-[64px] min-h-[44px] justify-center text-gray-400" data-page="review">
-                <span class="text-lg">📖</span>
-                <span class="text-[10px] mt-1">Lernen</span>
-            </button>
-            <button onclick="showPage('library')" class="nav-btn flex flex-col items-center py-2 px-3 min-w-[64px] min-h-[44px] justify-center text-gray-400" data-page="library">
-                <span class="text-lg">📚</span>
-                <span class="text-[10px] mt-1">Bib</span>
-            </button>
-        </div>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t md:hidden z-50">
+        <div class="flex justify-around" id="mobile-nav"></div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="max-w-5xl mx-auto px-4 py-8 pb-24 md:pt-16 md:pb-8">
+    <main class="max-w-5xl mx-auto px-4 py-6 pb-20 md:pt-16 md:pb-8">
 
         <!-- ═══════════ DASHBOARD ═══════════ -->
-        <div id="page-dashboard" class="page">
-            <!-- Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
+        <div id="page-dashboard" class="page active">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <div class="bg-white rounded-xl shadow-sm border p-4 text-center">
                     <div class="text-3xl font-bold text-primary" id="stat-total">0</div>
-                    <div class="text-xs text-gray-500 mt-1">Karten</div>
+                    <div class="text-xs text-gray-500 mt-1">Wissenskarten</div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
+                <div class="bg-white rounded-xl shadow-sm border p-4 text-center">
                     <div class="text-3xl font-bold text-orange-500" id="stat-due">0</div>
-                    <div class="text-xs text-gray-500 mt-1">Heute fällig</div>
+                    <div class="text-xs text-gray-500 mt-1">Fällig</div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center col-span-2 md:col-span-1">
-                    <div class="text-3xl font-bold text-green-500" id="stat-avg">-</div>
-                    <div class="text-xs text-gray-500 mt-1">Ø Bewertung</div>
+                <div class="bg-white rounded-xl shadow-sm border p-4 text-center col-span-2 md:col-span-1">
+                    <div class="text-3xl font-bold text-green-500" id="stat-lang-total">0</div>
+                    <div class="text-xs text-gray-500 mt-1">Sprachkarten</div>
                 </div>
             </div>
 
-            <!-- New Topic -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-3">🧠 Neues Thema eingeben</h2>
+            <!-- Topic Input -->
+            <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+                <h2 class="font-semibold text-gray-900 mb-3">🧠 Neues Wissen</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="topic-input"
-                        class="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                        placeholder="z.B. Wie entsteht eine Wolke?"
-                        minlength="3"
-                        onkeydown="if(event.key==='Enter')generateExplanations()">
-                    <button onclick="generateExplanations()" id="generate-btn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg whitespace-nowrap min-h-[44px] min-w-[44px] transition">
-                        Erklären
-                    </button>
+                    <input type="text" id="topic-input" class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="Thema eingeben..." minlength="3" onkeydown="if(event.key==='Enter')generateExplanations()">
+                    <button onclick="generateExplanations()" id="gen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg min-h-[44px] min-w-[44px]">Erklären</button>
                 </div>
                 <div id="gen-error" class="hidden mt-3 bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 text-sm"></div>
-                <div id="gen-loading" class="hidden mt-3 text-center py-4 text-gray-500">
-                    <span class="animate-pulse">🤖 KI generiert Erklärungen...</span>
-                </div>
+                <div id="gen-loading" class="hidden mt-3 text-center py-6 text-gray-500"><span class="animate-pulse">🤖 Generiere Erklärungen...</span></div>
                 <div id="gen-results" class="hidden mt-4 space-y-3"></div>
             </div>
 
-            <!-- Due Cards -->
-            <div id="due-section" class="hidden">
-                <h2 class="text-lg font-semibold text-gray-900 mb-3">🔔 Heute fällig</h2>
-                <div id="due-list" class="space-y-3"></div>
+            <!-- Random Mode -->
+            <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+                <h2 class="font-semibold text-gray-900 mb-3">🎲 Zufälliges Thema</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="category-input" class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="Kategorie (z.B. Gemüse, Physik, Tiere...)" onkeydown="if(event.key==='Enter')randomTopic()">
+                    <button onclick="randomTopic()" id="random-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg min-h-[44px] min-w-[44px]">🎲</button>
+                </div>
+                <div id="random-results" class="hidden mt-4 space-y-3"></div>
             </div>
+
+            <!-- Due Cards -->
+            <div id="due-section" class="mt-6 hidden"><h2 class="font-semibold text-gray-900 mb-3">🔔 Fällige Karten</h2><div id="due-list" class="space-y-3"></div></div>
         </div>
 
         <!-- ═══════════ REVIEW ═══════════ -->
-        <div id="page-review" class="page hidden">
+        <div id="page-review" class="page">
             <h1 class="text-2xl font-bold text-gray-900 mb-6">📖 Lernen</h1>
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button onclick="setReviewMode('knowledge')" id="rev-mode-k" class="px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-blue-600 text-white">Wissen</button>
+                <button onclick="setReviewMode('language')" id="rev-mode-l" class="px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-gray-200 text-gray-600">Sprache</button>
+            </div>
             <div id="review-container">
                 <div id="review-empty" class="text-center py-12 text-gray-500">
                     <div class="text-4xl mb-3">🎉</div>
-                    <p class="text-lg">Alle Karten gelernt!</p>
-                    <p class="text-sm mt-1">Füge neue Themen hinzu oder warte auf fällige Wiederholungen.</p>
+                    <p id="review-empty-text">Alle Karten gelernt!</p>
                 </div>
-                <div id="review-card" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
-                    <div class="flex justify-between items-start mb-2">
+                <div id="review-card" class="hidden bg-white rounded-xl shadow-sm border p-6 fade-in">
+                    <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
                         <span id="review-level" class="text-xs font-medium px-2 py-1 rounded-full"></span>
+                        <span id="review-tags" class="text-xs text-gray-400"></span>
                         <span id="review-counter" class="text-sm text-gray-400"></span>
                     </div>
-                    <h2 id="review-topic" class="text-lg font-semibold text-gray-900 mb-1"></h2>
-                    <p id="review-title" class="text-sm text-gray-400 mb-4 italic"></p>
-                    <div id="review-explanation" class="text-gray-700 leading-relaxed mb-6 whitespace-pre-wrap"></div>
-
-                    <!-- Rating -->
-                    <div class="border-t border-gray-100 pt-4">
-                        <p class="text-sm text-gray-500 mb-3">Wie gut hast du dich erinnert?</p>
-                        <div class="grid grid-cols-3 min-[360px]:grid-cols-6 gap-1.5 min-[360px]:gap-2" id="rating-buttons">
-                            <button onclick="rateCard(0)" class="rating-btn bg-red-50 hover:bg-red-100 text-red-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">0<br><span class="text-[10px]">vergessen</span></button>
-                            <button onclick="rateCard(1)" class="rating-btn bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">1<br><span class="text-[10px]">kaum</span></button>
-                            <button onclick="rateCard(2)" class="rating-btn bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">2<br><span class="text-[10px]">unsicher</span></button>
-                            <button onclick="rateCard(3)" class="rating-btn bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">3<br><span class="text-[10px]">okay</span></button>
-                            <button onclick="rateCard(4)" class="rating-btn bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">4<br><span class="text-[10px]">gut</span></button>
-                            <button onclick="rateCard(5)" class="rating-btn bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">5<br><span class="text-[10px]">perfekt</span></button>
+                    <h2 id="review-topic" class="text-lg font-semibold text-gray-900 mb-4"></h2>
+                    <div id="review-explanation" class="text-gray-700 leading-relaxed mb-6 text-sm md:text-base"></div>
+                    <div class="border-t pt-4">
+                        <p class="text-sm text-gray-500 mb-3">Wie gut erinnert?</p>
+                        <div class="grid grid-cols-6 gap-2" id="rating-buttons">
+                            <button onclick="rateCard(0)" class="rating-btn bg-red-50 hover:bg-red-100 text-red-700 font-medium py-3 rounded-lg text-xs leading-tight min-h-[44px]">0<br><span class="text-[9px]">vergessen</span></button>
+                            <button onclick="rateCard(1)" class="rating-btn bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-3 rounded-lg text-xs leading-tight min-h-[44px]">1<br><span class="text-[9px]">kaum</span></button>
+                            <button onclick="rateCard(2)" class="rating-btn bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium py-3 rounded-lg text-xs leading-tight min-h-[44px]">2<br><span class="text-[9px]">unsicher</span></button>
+                            <button onclick="rateCard(3)" class="rating-btn bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 rounded-lg text-xs leading-tight min-h-[44px]">3<br><span class="text-[9px]">okay</span></button>
+                            <button onclick="rateCard(4)" class="rating-btn bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 rounded-lg text-xs leading-tight min-h-[44px]">4<br><span class="text-[9px]">gut</span></button>
+                            <button onclick="rateCard(5)" class="rating-btn bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium py-3 rounded-lg text-xs leading-tight min-h-[44px]">5<br><span class="text-[9px]">perfekt</span></button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ═══════════ LANGUAGE ═══════════ -->
+        <div id="page-language" class="page">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">🌍 Sprachen</h1>
+
+            <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="setLangLevel('einfach')" id="lvl-einfach" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-green-100 text-green-700">Einfach</button>
+                    <button onclick="setLangLevel('mittel')" id="lvl-mittel" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-blue-100 text-blue-700">Mittel</button>
+                    <button onclick="setLangLevel('fortgeschritten')" id="lvl-fortgeschritten" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-purple-100 text-purple-700">Fortgeschritten</button>
+                    <select id="lang-target" class="border rounded-lg px-3 py-2 min-h-[44px]">
+                        <option value="en">Englisch</option>
+                        <option value="fr">Französisch</option>
+                        <option value="es">Spanisch</option>
+                        <option value="it">Italienisch</option>
+                        <option value="tr">Türkisch</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="setLangMode('translate')" id="mode-translate" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-blue-600 text-white">Übersetzen</button>
+                    <button onclick="setLangMode('generate')" id="mode-generate" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-gray-200 text-gray-600">Satz generieren</button>
+                </div>
+                <div id="lang-input-area">
+                    <div class="flex gap-2">
+                        <input type="text" id="lang-input" class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="Wort oder Satz eingeben..." onkeydown="if(event.key==='Enter')generateLang()">
+                        <button onclick="generateLang()" id="lang-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg min-h-[44px]">Übersetzen</button>
+                    </div>
+                </div>
+                <div id="lang-error" class="hidden mt-3 bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 text-sm"></div>
+                <div id="lang-loading" class="hidden mt-3 text-center py-4 text-gray-500"><span class="animate-pulse">🌍 Generiere Übersetzung...</span></div>
+                <div id="lang-result" class="hidden mt-4 p-4 bg-gray-50 rounded-lg border">
+                    <p class="text-sm text-gray-500" id="lang-source-label">Quelle:</p>
+                    <p id="lang-source-text" class="font-medium text-gray-900 mb-3"></p>
+                    <p class="text-sm text-gray-500" id="lang-target-label">Übersetzung:</p>
+                    <p id="lang-target-text" class="font-medium text-blue-600 mb-3"></p>
+                    <button onclick="saveLangCard()" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg min-h-[44px] text-sm">Als Karte speichern 📥</button>
+                </div>
+            </div>
+
+            <h2 class="font-semibold text-gray-900 mb-3">📚 Sprachkarten</h2>
+            <div id="lang-cards-list" class="space-y-2"></div>
+        </div>
+
         <!-- ═══════════ LIBRARY ═══════════ -->
-        <div id="page-library" class="page hidden">
-            <div class="flex items-center justify-between mb-6">
+        <div id="page-library" class="page">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h1 class="text-2xl font-bold text-gray-900">📚 Bibliothek</h1>
                 <span id="lib-count" class="text-sm text-gray-500"></span>
             </div>
-            <div id="library-list" class="space-y-3"></div>
-            <div id="library-empty" class="hidden text-center py-12 text-gray-500">
-                <div class="text-4xl mb-3">📭</div>
-                <p>Noch keine Karten. Füge ein Thema hinzu!</p>
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <input type="text" id="lib-search" class="border rounded-lg px-3 py-2 flex-1 min-w-[180px] text-base" placeholder="🔍 Suchen..." oninput="renderLibrary()">
+                <select id="lib-sort" class="border rounded-lg px-3 py-2 min-h-[44px]" onchange="renderLibrary()">
+                    <option value="date">Neueste</option>
+                    <option value="review">Nächster Review</option>
+                    <option value="level">Nach Level</option>
+                </select>
             </div>
+            <div id="lib-tag-filter" class="flex flex-wrap gap-2 mb-4"></div>
+            <div id="library-list" class="space-y-3"></div>
+            <div id="library-empty" class="hidden text-center py-12 text-gray-500"><div class="text-4xl mb-3">📭</div><p>Keine Karten gefunden.</p></div>
         </div>
 
     </main>
@@ -149,331 +175,337 @@
 // ═══════════════════════════════════════════════
 // State
 // ═══════════════════════════════════════════════
-let dueCards = [];
-let currentReviewIndex = 0;
-let allCards = [];
-
-// Generate state
-let _genTopic = '';
-let _genTitle = '';
-let _genExplanations = {};
+let dueCards = [], currentReviewIndex = 0, reviewMode = 'knowledge';
+let allCards = [], allTags = [], selectedTagFilter = null;
+let langLevel = 'einfach', langMode = 'translate', langData = null;
+let langDueCards = [], langReviewIndex = 0;
 
 // ═══════════════════════════════════════════════
 // Navigation
 // ═══════════════════════════════════════════════
-function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    const page = document.getElementById('page-' + name);
-    if (page) page.classList.remove('hidden');
+const NAV_ITEMS = [
+    {id:'dashboard',icon:'🏠',label:'Start'},{id:'review',icon:'📖',label:'Lernen'},{id:'language',icon:'🌍',label:'Sprache'},{id:'library',icon:'📚',label:'Bib'}
+];
 
-    document.querySelectorAll('.nav-btn').forEach(b => {
-        b.classList.remove('text-primary');
-        if (b.dataset.page === name) b.classList.remove('text-gray-400');
-        else { b.classList.add('text-gray-400'); b.classList.remove('text-primary'); }
-    });
-    const activeBtn = document.querySelector(`.nav-btn[data-page="${name}"]`);
-    if (activeBtn && window.innerWidth >= 768) activeBtn.classList.add('text-primary');
+function initNav(){
+    const dn=document.getElementById('desktop-nav'),mn=document.getElementById('mobile-nav');
+    dn.innerHTML=NAV_ITEMS.map(n=>`<button onclick="showPage('${n.id}')" class="nav-btn-d px-4 py-2 text-sm rounded-lg min-h-[44px]" data-page="${n.id}">${n.label}</button>`).join('');
+    mn.innerHTML=NAV_ITEMS.map(n=>`<button onclick="showPage('${n.id}')" class="nav-btn-m flex flex-col items-center py-2 px-3 min-w-[64px] min-h-[44px] justify-center text-gray-400" data-page="${n.id}"><span class="text-lg">${n.icon}</span><span class="text-[10px] mt-1">${n.label}</span></button>`).join('');
+}
 
-    if (name === 'dashboard') loadDashboard();
-    if (name === 'review') loadReview();
-    if (name === 'library') loadLibrary();
+function showPage(name){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+name).classList.add('active');
+    document.querySelectorAll('.nav-btn-m').forEach(b=>b.classList.toggle('text-gray-400',b.dataset.page!==name));
+
+    if(name==='dashboard')loadDashboard();
+    if(name==='review')loadReview();
+    if(name==='language')loadLangCards();
+    if(name==='library'){loadCards();loadTags();}
 }
 
 // ═══════════════════════════════════════════════
-// API Helpers
+// API Helper
 // ═══════════════════════════════════════════════
-async function api(url, opts = {}) {
-    try {
-        const res = await fetch(url, opts);
-        return { ok: res.ok, status: res.status, data: await res.json() };
-    } catch (e) {
-        return { ok: false, status: 0, data: { error: 'Netzwerkfehler' } };
-    }
+async function api(url,opts={}){
+    try{
+        const res=await fetch(url,opts);
+        return {ok:res.ok,status:res.status,data:await res.json()};
+    }catch(e){return {ok:false,status:0,data:{error:'Netzwerkfehler'}};}
 }
 
 // ═══════════════════════════════════════════════
-// Dashboard
+// DASHBOARD
 // ═══════════════════════════════════════════════
-async function loadDashboard() {
-    const stats = await api('/api/stats');
-    if (stats.ok) {
-        document.getElementById('stat-total').textContent = stats.data.total || 0;
-        document.getElementById('stat-due').textContent = stats.data.due || 0;
-        document.getElementById('stat-avg').textContent = stats.data.avg_rating ? stats.data.avg_rating.toFixed(1) : '-';
+async function loadDashboard(){
+    const s=await api('/api/stats');
+    if(s.ok){
+        document.getElementById('stat-total').textContent=s.data.total||0;
+        document.getElementById('stat-due').textContent=s.data.due||0;
+        document.getElementById('stat-lang-total').textContent=s.data.language_total||0;
     }
-
-    const due = await api('/api/cards/due');
-    if (due.ok && due.data.length > 0) {
+    const d=await api('/api/cards/due');
+    if(d.ok&&d.data.length>0){
         document.getElementById('due-section').classList.remove('hidden');
-        const list = document.getElementById('due-list');
-        list.innerHTML = due.data.slice(0, 5).map(c => `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between">
-                <div>
-                    <p class="font-medium text-gray-900 text-sm">${escHtml(c.title || c.topic)}</p>
-                    <p class="text-xs text-gray-400 mt-1">${levelLabel(c.level)} · ${c.repetitions}x wiederholt</p>
-                </div>
-                <button onclick="showPage('review')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg min-h-[44px] flex items-center">Lernen</button>
-            </div>
-        `).join('');
-    } else {
-        document.getElementById('due-section').classList.add('hidden');
-    }
+        document.getElementById('due-list').innerHTML=d.data.slice(0,5).map(c=>`
+            <div class="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
+                <div><p class="font-medium text-gray-900 text-sm">${esc(c.title||c.topic)}</p>
+                <p class="text-xs text-gray-400 mt-1">${levelLabel(c.level)} · ${c.repetitions}x</p></div>
+                <button onclick="showPage('review')" class="bg-blue-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg min-h-[36px]">Lernen</button>
+            </div>`).join('');
+    }else document.getElementById('due-section').classList.add('hidden');
 }
 
-async function generateExplanations() {
-    const topic = document.getElementById('topic-input').value.trim();
-    if (topic.length < 3) return;
+async function generateExplanations(){
+    const topic=document.getElementById('topic-input').value.trim();
+    if(topic.length<3)return;
+    toggleUI('gen','Generiere...');
+    const res=await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+    toggleUI('gen','Erklären',true);
+    if(!res.ok){showError('gen',res.data.error);return;}
+    showExplanations(topic,res.data);
+}
 
-    const loading = document.getElementById('gen-loading');
-    const results = document.getElementById('gen-results');
-    const error = document.getElementById('gen-error');
-    const btn = document.getElementById('generate-btn');
+async function randomTopic(){
+    const cat=document.getElementById('category-input').value.trim();
+    if(!cat)return;
+    toggleUI('random','🎲...');
+    const res=await api('/api/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat})});
+    toggleUI('random','🎲',true);
+    if(!res.ok){showError('random',res.data.error);return;}
+    document.getElementById('random-results').classList.remove('hidden');
+    showExplanations(res.data.topic,res.data,'random-results');
+}
 
-    error.classList.add('hidden');
-    results.classList.add('hidden');
-    results.innerHTML = '';
-    loading.classList.remove('hidden');
-    btn.disabled = true;
-    btn.textContent = '...';
-
-    const res = await api('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic })
-    });
-
-    loading.classList.add('hidden');
-    btn.disabled = false;
-    btn.textContent = 'Erklären';
-
-    if (!res.ok) {
-        error.textContent = res.data.error || 'Fehler beim Generieren';
-        error.classList.remove('hidden');
-        return;
-    }
-
-    // Store in state for selectExplanation
-    _genTopic = topic;
-    _genTitle = res.data.title || topic;
-    _genExplanations = res.data.explanations || {};
-
-    const expl = _genExplanations;
-    const levels = [
-        { key: 'kurz',        label: '⚡ Kurz & Knapp', color: 'bg-green-50 border-green-200',   badge: 'bg-green-100 text-green-700' },
-        { key: 'kompakt',     label: '📖 Kompakt',      color: 'bg-blue-50 border-blue-200',    badge: 'bg-blue-100 text-blue-700' },
-        { key: 'ausfuehrlich',label: '🔬 Ausführlich',  color: 'bg-purple-50 border-purple-200', badge: 'bg-purple-100 text-purple-700' }
+function showExplanations(topic,data,containerId='gen-results'){
+    const container=document.getElementById(containerId);
+    container.innerHTML='';
+    const levels=[
+        {key:'kurz',label:'⚡ Kurz & Knapp',color:'bg-green-50 border-green-200',badge:'bg-green-100 text-green-700'},
+        {key:'kompakt',label:'📖 Kompakt',color:'bg-blue-50 border-blue-200',badge:'bg-blue-100 text-blue-700'},
+        {key:'ausfuehrlich',label:'🔬 Ausführlich',color:'bg-purple-50 border-purple-200',badge:'bg-purple-100 text-purple-700'}
     ];
-
-    const titleHtml = _genTitle && _genTitle !== topic
-        ? `<p class="text-xs text-gray-500 mb-2 italic">${escHtml(_genTitle)}</p>`
-        : '';
-
-    results.innerHTML = titleHtml + levels.map(l => `
-        <div class="bg-white rounded-xl shadow-sm border ${l.color} p-4">
+    container.innerHTML=levels.map(l=>`
+        <div class="bg-white rounded-xl shadow-sm border ${l.color} p-4 fade-in">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full ${l.badge}">${l.label}</span>
             </div>
-            <p class="text-sm text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">${escHtml(expl[l.key] || '')}</p>
-            <button onclick="selectExplanation('${l.key}')"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg min-h-[44px] transition">
-                Diese Erklärung übernehmen 📥
-            </button>
-        </div>
-    `).join('');
-
-    results.classList.remove('hidden');
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">${esc(data[l.key]||'')}</p>
+            <button onclick="saveCard('${escAttr(topic)}','${escAttr(data[l.key])}','${l.key}','${escAttr(data.title||topic)}')"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg min-h-[44px]">📥 Übernehmen</button>
+        </div>`).join('');
+    container.classList.remove('hidden');
 }
 
-async function selectExplanation(level) {
-    const explanation = _genExplanations[level];
-    if (!explanation || !_genTopic) return;
-
-    const res = await api('/api/cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: _genTopic, explanation, level, title: _genTitle })
-    });
-
-    if (res.ok) {
-        document.getElementById('topic-input').value = '';
-        _genTopic = '';
-        _genTitle = '';
-        _genExplanations = {};
-        const area = document.getElementById('gen-results');
-        area.innerHTML = `<div class="bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-3 text-sm">✅ Karte erstellt! <a href="#" onclick="showPage('review');return false" class="underline font-medium">Jetzt lernen →</a></div>`;
-        area.classList.remove('hidden');
+async function saveCard(topic,explanation,level,title){
+    const res=await api('/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,explanation,level,title})});
+    if(res.ok){
+        document.getElementById('topic-input').value='';
+        document.getElementById('gen-results').classList.add('hidden');
         loadDashboard();
-    } else {
-        alert('Fehler: ' + (res.data.error || 'Unbekannt'));
+        alert('✅ Karte erstellt!');
+    }else alert('Fehler: '+(res.data.error||''));
+}
+
+// ═══════════════════════════════════════════════
+// REVIEW
+// ═══════════════════════════════════════════════
+function setReviewMode(mode){
+    reviewMode=mode;
+    document.getElementById('rev-mode-k').className='px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(mode==='knowledge'?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
+    document.getElementById('rev-mode-l').className='px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(mode==='language'?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
+    loadReview();
+}
+
+async function loadReview(){
+    if(reviewMode==='knowledge'){
+        const r=await api('/api/cards/due');
+        dueCards=r.ok?r.data:[];
+    }else{
+        const r=await api('/api/language/cards/due');
+        dueCards=r.ok?r.data:[];
     }
+    currentReviewIndex=0;
+    renderReview();
 }
 
-// ═══════════════════════════════════════════════
-// Review
-// ═══════════════════════════════════════════════
-async function loadReview() {
-    const res = await api('/api/cards/due');
-    dueCards = res.ok ? res.data : [];
-    currentReviewIndex = 0;
-    renderReviewCard();
-}
-
-function renderReviewCard() {
-    const empty = document.getElementById('review-empty');
-    const card = document.getElementById('review-card');
-
-    if (dueCards.length === 0 || currentReviewIndex >= dueCards.length) {
+function renderReview(){
+    const empty=document.getElementById('review-empty'),card=document.getElementById('review-card');
+    if(dueCards.length===0||currentReviewIndex>=dueCards.length){
         empty.classList.remove('hidden');
-        card.classList.add('hidden');
-        return;
+        empty.querySelector('p').textContent=reviewMode==='knowledge'?'Alle Wissenskarten gelernt!':'Alle Sprachkarten gelernt!';
+        card.classList.add('hidden');return;
     }
-
-    empty.classList.add('hidden');
-    card.classList.remove('hidden');
-
-    const c = dueCards[currentReviewIndex];
-    document.getElementById('review-topic').textContent = c.title || c.topic;
-    const titleEl = document.getElementById('review-title');
-    if (c.title && c.title !== c.topic) {
-        titleEl.textContent = c.topic;
-        titleEl.classList.remove('hidden');
-    } else {
-        titleEl.textContent = '';
-        titleEl.classList.add('hidden');
+    empty.classList.add('hidden');card.classList.remove('hidden');
+    const c=dueCards[currentReviewIndex];
+    if(reviewMode==='knowledge'){
+        document.getElementById('review-topic').textContent=c.title||c.topic;
+        document.getElementById('review-explanation').textContent=c.explanation;
+        document.getElementById('review-tags').textContent=c.tags&&c.tags.length?c.tags.join(', '):'';
+    }else{
+        document.getElementById('review-topic').textContent=c.source_text;
+        document.getElementById('review-explanation').innerHTML=`<strong>Übersetzung:</strong> ${esc(c.target_text)}`;
+        document.getElementById('review-tags').textContent=c.target_lang.toUpperCase();
     }
-    document.getElementById('review-explanation').textContent = c.explanation;
-    document.getElementById('review-counter').textContent = `${currentReviewIndex + 1} / ${dueCards.length}`;
-
-    const levelEl = document.getElementById('review-level');
-    const l = c.level;
-    if (l === 'kurz') {
-        levelEl.textContent = '⚡ Kurz & Knapp';
-        levelEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700';
-    } else if (l === 'kompakt') {
-        levelEl.textContent = '📖 Kompakt';
-        levelEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700';
-    } else {
-        levelEl.textContent = '🔬 Ausführlich';
-        levelEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-700';
+    document.getElementById('review-counter').textContent=`${currentReviewIndex+1}/${dueCards.length}`;
+    const le=document.getElementById('review-level');
+    const lvl=c.level;
+    if(reviewMode==='language'){
+        le.textContent=langLevelLabel(lvl);
+        le.className='text-xs font-medium px-2 py-1 rounded-full '+(lvl==='einfach'?'bg-green-100 text-green-700':lvl==='mittel'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700');
+    }else{
+        le.textContent=levelLabel(lvl);
+        le.className='text-xs font-medium px-2 py-1 rounded-full '+(lvl==='kurz'?'bg-green-100 text-green-700':lvl==='kompakt'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700');
     }
 }
 
-async function rateCard(rating) {
-    const card = dueCards[currentReviewIndex];
-    if (!card) return;
+async function rateCard(r){
+    const card=dueCards[currentReviewIndex];if(!card)return;
+    document.querySelectorAll('.rating-btn').forEach(b=>b.disabled=true);
+    const endpoint=reviewMode==='knowledge'?`/api/cards/${card.id}/review`:`/api/language/cards/${card.id}/review`;
+    const res=await api(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating:r})});
+    document.querySelectorAll('.rating-btn').forEach(b=>b.disabled=false);
+    if(res.ok){
+        dueCards.splice(dueCards.indexOf(card),1);
+        currentReviewIndex=Math.min(currentReviewIndex,dueCards.length);
+        renderReview();
+    }
+}
 
-    document.querySelectorAll('.rating-btn').forEach(b => b.disabled = true);
-
-    const res = await api(`/api/cards/${card.id}/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating })
+// ═══════════════════════════════════════════════
+// LANGUAGE
+// ═══════════════════════════════════════════════
+function setLangLevel(l){
+    langLevel=l;
+    ['einfach','mittel','fortgeschritten'].forEach(ll=>{
+        const el=document.getElementById('lvl-'+ll);
+        if(ll===l)el.className='px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-blue-600 text-white';
+        else el.className=el.className.replace(/bg-blue.*text-white/,'').trim()+' '+(ll==='einfach'?'bg-green-100 text-green-700':ll==='mittel'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700');
     });
+}
 
-    document.querySelectorAll('.rating-btn').forEach(b => b.disabled = false);
+function setLangMode(m){
+    langMode=m;
+    document.getElementById('mode-translate').className='px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(m==='translate'?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
+    document.getElementById('mode-generate').className='px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(m==='generate'?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
+    document.getElementById('lang-input').placeholder=m==='translate'?'Wort oder Satz eingeben...':'';
+    document.getElementById('lang-input-area').style.display=m==='translate'?'block':'none';
+}
 
-    if (res.ok) {
-        const idx = dueCards.indexOf(card);
-        if (idx !== -1) dueCards.splice(idx, 1);
-        currentReviewIndex = Math.min(currentReviewIndex, dueCards.length - 1);
-        if (currentReviewIndex < 0) currentReviewIndex = 0;
-        renderReviewCard();
-        if (!document.getElementById('page-dashboard').classList.contains('hidden')) {
-            loadDashboard();
-        }
-    }
+async function generateLang(){
+    const text=document.getElementById('lang-input').value.trim();
+    const target_lang=document.getElementById('lang-target').value;
+    if(langMode==='translate'&&!text)return;
+    toggleUI('lang','Generiere...');
+    const body={target_lang,level:langLevel,mode:langMode};
+    if(langMode==='translate')body.text=text;
+    const res=await api('/api/language/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toggleUI('lang','Übersetzen',true);
+    if(!res.ok){showError('lang',res.data.error);return;}
+    langData=res.data;
+    document.getElementById('lang-result').classList.remove('hidden');
+    document.getElementById('lang-source-text').textContent=res.data.source_text;
+    document.getElementById('lang-target-text').textContent=res.data.target_text;
+    document.getElementById('lang-source-label').textContent=langMode==='translate'?'Eingabe:':'Satz:';
+    document.getElementById('lang-target-label').textContent='Übersetzung:';
+}
+
+async function saveLangCard(){
+    if(!langData)return;
+    const target_lang=document.getElementById('lang-target').value;
+    const res=await api('/api/language/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        source_text:langData.source_text,target_text:langData.target_text,
+        source_lang:'de',target_lang,level:langLevel
+    })});
+    if(res.ok){
+        document.getElementById('lang-result').classList.add('hidden');
+        document.getElementById('lang-input').value='';
+        loadLangCards();
+        alert('✅ Sprachkarte erstellt!');
+    }else alert('Fehler: '+(res.data.error||''));
+}
+
+async function loadLangCards(){
+    const r=await api('/api/language/cards');
+    const cards=r.ok?r.data:[];
+    const list=document.getElementById('lang-cards-list');
+    if(cards.length===0){list.innerHTML='<p class="text-gray-500 text-sm">Noch keine Sprachkarten.</p>';return;}
+    list.innerHTML=cards.slice(0,10).map(c=>`
+        <div class="bg-white rounded-xl shadow-sm border p-3 flex items-center justify-between">
+            <div class="flex-1 min-w-0 mr-2">
+                <p class="font-medium text-sm truncate">${esc(c.source_text)}</p>
+                <p class="text-xs text-blue-600 truncate">→ ${esc(c.target_text)}</p>
+                <span class="text-[10px] text-gray-400">${langLevelLabel(c.level)} · ${c.target_lang.toUpperCase()}</span>
+            </div>
+        </div>`).join('');
 }
 
 // ═══════════════════════════════════════════════
-// Library
+// LIBRARY
 // ═══════════════════════════════════════════════
-async function loadLibrary() {
-    const res = await api('/api/cards');
-    allCards = res.ok ? res.data : [];
+async function loadCards(){
+    const r=await api('/api/cards');
+    allCards=r.ok?r.data:[];
+    document.getElementById('lib-count').textContent=`${allCards.length} Karten`;
+    renderLibrary();
+}
 
-    document.getElementById('lib-count').textContent = `${allCards.length} Karten`;
+async function loadTags(){
+    const r=await api('/api/tags');
+    allTags=r.ok?r.data:[];
+    const filter=document.getElementById('lib-tag-filter');
+    if(allTags.length===0){filter.innerHTML='';return;}
+    filter.innerHTML='<span class="text-xs text-gray-400 mr-1 self-center">Tags:</span>'+
+        allTags.map(t=>`<button onclick="toggleTagFilter(${t.id})" class="tag-btn tag-${t.id} text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 min-h-[28px]">${t.name}</button>`).join('');
+}
 
-    const list = document.getElementById('library-list');
-    const empty = document.getElementById('library-empty');
+function toggleTagFilter(tagId){
+    selectedTagFilter=selectedTagFilter===tagId?null:tagId;
+    document.querySelectorAll('.tag-btn').forEach(b=>{
+        if(b.classList.contains('tag-'+tagId))b.className=selectedTagFilter===tagId?'tag-btn tag-'+tagId+' text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 min-h-[28px]':'tag-btn tag-'+tagId+' text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 min-h-[28px]';
+    });
+    renderLibrary();
+}
 
-    if (allCards.length === 0) {
-        list.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-    }
-
+function renderLibrary(){
+    const list=document.getElementById('library-list'),empty=document.getElementById('library-empty');
+    let cards=[...allCards];
+    const q=document.getElementById('lib-search').value.toLowerCase();
+    if(q)cards=cards.filter(c=>(c.title||c.topic||c.explanation).toLowerCase().includes(q));
+    if(selectedTagFilter)cards=cards.filter(c=>c.tags&&c.tags.includes(allTags.find(t=>t.id===selectedTagFilter)?.name));
+    const sort=document.getElementById('lib-sort').value;
+    if(sort==='review')cards.sort((a,b)=>(a.next_review||'9999').localeCompare(b.next_review||'9999'));
+    else if(sort==='level')cards.sort((a,b)=>a.level.localeCompare(b.level));
+    else cards.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    if(cards.length===0){list.innerHTML='';empty.classList.remove('hidden');return;}
     empty.classList.add('hidden');
-    list.innerHTML = allCards.map(c => {
-        const displayTitle = c.title || c.topic;
-        const subtitle = (c.title && c.title !== c.topic) ? c.topic : '';
-        const tagsHtml = (c.tags && c.tags.length > 0)
-            ? c.tags.map(t => `<span class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">${escHtml(t.name)}</span>`).join('')
-            : '';
-        return `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+    list.innerHTML=cards.map(c=>`
+        <div class="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
             <div class="flex-1 min-w-0 mr-3">
-                <p class="font-medium text-gray-900 text-sm truncate">${escHtml(displayTitle)}</p>
-                ${subtitle ? `<p class="text-xs text-gray-400 truncate">${escHtml(subtitle)}</p>` : ''}
+                <p class="font-medium text-gray-900 text-sm truncate">${esc(c.title||c.topic)}</p>
                 <div class="flex flex-wrap gap-1.5 mt-1">
-                    <span class="text-xs ${levelBadge(c.level)}">${levelLabel(c.level)}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${c.level==='kurz'?'bg-green-100 text-green-700':c.level==='kompakt'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700'}">${levelLabel(c.level)}</span>
+                    ${(c.tags||[]).map(t=>`<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${t}</span>`).join('')}
+                    <span class="text-xs text-gray-400">⏰ ${fmtDate(c.next_review)}</span>
                     <span class="text-xs text-gray-400">🔁 ${c.repetitions}x</span>
-                    <span class="text-xs text-gray-400">⏰ ${formatDate(c.next_review)}</span>
-                    ${tagsHtml}
                 </div>
             </div>
-            <button onclick="deleteCard(${c.id})" class="text-red-400 hover:text-red-600 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Löschen">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>
-        </div>
-        `;
-    }).join('');
+            <button onclick="deleteCard(${c.id})" class="text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Löschen">🗑️</button>
+        </div>`).join('');
 }
 
-async function deleteCard(id) {
-    if (!confirm('Karte wirklich löschen?')) return;
-    const res = await api(`/api/cards/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-        allCards = allCards.filter(c => c.id !== id);
-        loadLibrary();
-    }
+async function deleteCard(id){
+    if(!confirm('Karte löschen?'))return;
+    const r=await api(`/api/cards/${id}`,{method:'DELETE'});
+    if(r.ok){allCards=allCards.filter(c=>c.id!==id);renderLibrary();loadDashboard();}
 }
 
 // ═══════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════
-function escHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = String(s || '');
-    return d.innerHTML;
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function escAttr(s){return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function levelLabel(l){return l==='kurz'?'⚡ Kurz & Knapp':l==='kompakt'?'📖 Kompakt':'🔬 Ausführlich';}
+function langLevelLabel(l){return l==='einfach'?'Einfach':l==='mittel'?'Mittel':'Fortgeschritten';}
+function fmtDate(d){if(!d)return'-';const t=new Date().toISOString().slice(0,10),tm=new Date(Date.now()+864e5).toISOString().slice(0,10);return d===t?'Heute':d===tm?'Morgen':new Date(d).toLocaleDateString('de-DE');}
+
+function toggleUI(prefix,label,done){
+    const loading=document.getElementById(prefix+'-loading'),btn=document.getElementById(prefix+'-btn');
+    const err=document.getElementById(prefix+'-error');
+    if(done){loading.classList.add('hidden');btn.disabled=false;btn.textContent=label;return;}
+    loading.classList.remove('hidden');btn.disabled=true;btn.textContent=label;
+    if(err)err.classList.add('hidden');
 }
 
-function levelLabel(level) {
-    if (level === 'kurz')         return '⚡ Kurz & Knapp';
-    if (level === 'kompakt')      return '📖 Kompakt';
-    if (level === 'ausfuehrlich') return '🔬 Ausführlich';
-    return level;
-}
-
-function levelBadge(level) {
-    if (level === 'kurz')         return 'px-2 py-0.5 rounded-full bg-green-100 text-green-700';
-    if (level === 'kompakt')      return 'px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
-    if (level === 'ausfuehrlich') return 'px-2 py-0.5 rounded-full bg-purple-100 text-purple-700';
-    return 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600';
-}
-
-function formatDate(d) {
-    if (!d) return '-';
-    const today = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-    if (d === today) return 'Heute';
-    if (d === tomorrow) return 'Morgen';
-    return new Date(d).toLocaleDateString('de-DE');
+function showError(prefix,msg){
+    const err=document.getElementById(prefix+'-error');
+    err.textContent=msg;err.classList.remove('hidden');
 }
 
 // ═══════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════
-showPage('dashboard');
+initNav();showPage('dashboard');
 </script>
 </body>
 </html>

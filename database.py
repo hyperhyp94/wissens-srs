@@ -1,10 +1,10 @@
 """
 Wissens-SRS Database Layer
-SQLite mit allen CRUD-Operationen für Karten, Erklärungen, Tags, Sprachkarten und Review-Log.
+SQLite mit allen CRUD-Operationen für Karten, Tags, Sprachkarten und Review-Log.
 """
 import sqlite3
 import os
-from datetime import date
+from datetime import date, datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "wissens.db")
 
@@ -17,117 +17,56 @@ def get_db():
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
+def _table_exists(conn, name):
+    return conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+    ).fetchone() is not None
 
-# ── Migration Helpers ────────────────────────────────────────────
-
-def _migrate_cards_table(conn):
-    """Rebuild cards: old level names (easy/gruendlich/experte) → new (kurz/kompakt/ausfuehrlich), add title."""
-    conn.execute("PRAGMA foreign_keys=OFF")
-
-    old_cols = [r['name'] for r in conn.execute("PRAGMA table_info(cards)").fetchall()]
-    has_title = 'title' in old_cols
-    title_expr = "COALESCE(NULLIF(title,''), topic)" if has_title else "topic"
-
-    conn.execute("""CREATE TABLE cards_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        topic TEXT NOT NULL,
-        title TEXT,
-        explanation TEXT NOT NULL,
-        level TEXT NOT NULL CHECK(level IN ('kurz','kompakt','ausfuehrlich')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        ease_factor REAL DEFAULT 2.5,
-        interval_days INTEGER DEFAULT 0,
-        repetitions INTEGER DEFAULT 0,
-        next_review DATE,
-        last_reviewed DATE,
-        review_count INTEGER DEFAULT 0,
-        avg_rating REAL DEFAULT 0
-    )""")
-
-    conn.execute(f"""INSERT INTO cards_new
-        SELECT id, topic, {title_expr} AS title, explanation,
-            CASE level
-                WHEN 'easy'       THEN 'kurz'
-                WHEN 'gruendlich' THEN 'kompakt'
-                WHEN 'experte'    THEN 'ausfuehrlich'
-                ELSE 'kurz'
-            END AS level,
-            created_at, ease_factor, interval_days, repetitions,
-            next_review, last_reviewed, review_count, avg_rating
-        FROM cards""")
-
-    conn.execute("DROP TABLE cards")
-    conn.execute("ALTER TABLE cards_new RENAME TO cards")
-    conn.commit()
-    conn.execute("PRAGMA foreign_keys=ON")
-
-
-def _migrate_explanations_table(conn):
-    """Drop and recreate explanations with new level constraint (cache is regeneratable)."""
-    conn.execute("DROP TABLE IF EXISTS explanations")
-    conn.execute("""CREATE TABLE explanations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        topic TEXT NOT NULL,
-        topic_hash TEXT NOT NULL,
-        level TEXT NOT NULL CHECK(level IN ('kurz','kompakt','ausfuehrlich')),
-        explanation TEXT NOT NULL,
-        generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(topic_hash, level)
-    )""")
-    conn.commit()
-
-
-# ── Init ─────────────────────────────────────────────────────────
+def _migrate_levels(conn, table, old_levels, new_levels):
+    """CHECK-Constraint via Table-Rebuild migrieren."""
+    if not _table_exists(conn, table):
+        return
+    # Prüfe ob alte Levels noch da sind
+    row = conn.execute(f"SELECT DISTINCT level FROM {table} LIMIT 1").fetchone()
+    if not row:
+        return
+    # Nimm das alte CREATE Statement
+    cols = [r['name'] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    mapping = dict(zip(old_levels, new_levels))
+    
+    # Check ob bereits neue Levels verwendet werden
+    sample = row[0]
+    if sample in new_levels:
+        return  # bereits migriert
+    
+    # Migration durchführen
+    col_defs = ", ".join(
+        f"{r['name']} {r['type']}" +
+        (" NOT NULL" if r['notnull'] else "") +
+        (" DEFAULT " + repr(r['dflt_value']) if r['dflt_value'] else "") +
+        (f" CHECK(level IN {tuple(new_levels)!r})" if r['name'] == 'level' else "") +
+        (" REFERENCES cards(id) ON DELETE CASCADE" if r['name'] == 'card_id' and table == 'card_tags' else "") +
+        (" REFERENCES tags(id) ON DELETE CASCADE" if r['name'] == 'tag_id' and table == 'card_tags' else "")
+        for r in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    )
+    
+    conn.execute(f"SAVEPOINT mig_level_{table}")
+    try:
+        conn.execute(f"CREATE TABLE {table}_new ({col_defs})")
+        case_expr = "CASE level " + " ".join(f"WHEN '{k}' THEN '{v}'" for k,v in mapping.items()) + f" ELSE '{new_levels[0]}' END"
+        conn.execute(f"INSERT INTO {table}_new SELECT *, {case_expr} FROM {table}")
+        conn.execute(f"DROP TABLE {table}")
+        conn.execute(f"ALTER TABLE {table}_new RENAME TO {table}")
+        conn.execute(f"RELEASE mig_level_{table}")
+    except Exception:
+        conn.execute("ROLLBACK TO mig_level_{table}")
+        raise
 
 def init_db():
-    """Tabellen erstellen und Migrationen durchführen (idempotent)."""
+    """Tabellen erstellen (idempotent) inkl. Migration."""
     conn = get_db()
-
-    # ── Tabellen ohne Migrations-Abhängigkeit ──────────────────
-    conn.execute("""CREATE TABLE IF NOT EXISTS review_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-        rating INTEGER NOT NULL CHECK(rating BETWEEN 0 AND 5),
-        reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""")
-
-    # T0.4: Tags
-    conn.execute("""CREATE TABLE IF NOT EXISTS tags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS card_tags (
-        card_id INTEGER REFERENCES cards(id) ON DELETE CASCADE,
-        tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
-        PRIMARY KEY(card_id, tag_id)
-    )""")
-
-    # T0.5: Sprachkarten
-    conn.execute("""CREATE TABLE IF NOT EXISTS language_cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        source_text TEXT NOT NULL,
-        target_text TEXT NOT NULL,
-        source_lang TEXT DEFAULT 'de',
-        target_lang TEXT DEFAULT 'en',
-        level TEXT NOT NULL CHECK(level IN ('einfach','mittel','fortgeschritten')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        ease_factor REAL DEFAULT 2.5,
-        interval_days INTEGER DEFAULT 0,
-        repetitions INTEGER DEFAULT 0,
-        next_review DATE,
-        last_reviewed DATE,
-        review_count INTEGER DEFAULT 0,
-        avg_rating REAL DEFAULT 0
-    )""")
-    conn.commit()
-
-    # ── T0.2: cards table (mit Migration) ─────────────────────
-    cards_exists = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='cards'"
-    ).fetchone()
-
-    if not cards_exists:
-        conn.execute("""CREATE TABLE cards (
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS cards (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             topic TEXT NOT NULL,
             title TEXT,
@@ -141,30 +80,9 @@ def init_db():
             last_reviewed DATE,
             review_count INTEGER DEFAULT 0,
             avg_rating REAL DEFAULT 0
-        )""")
-        conn.commit()
-    else:
-        schema = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='cards'"
-        ).fetchone()['sql']
-
-        if "'easy'" in schema:
-            # T0.2: Rebuild mit Level-Mapping
-            _migrate_cards_table(conn)
-        else:
-            # T0.1: title Spalte ergänzen falls fehlend
-            cols = [r['name'] for r in conn.execute("PRAGMA table_info(cards)").fetchall()]
-            if 'title' not in cols:
-                conn.execute("ALTER TABLE cards ADD COLUMN title TEXT")
-                conn.commit()
-
-    # ── T0.3: explanations table (mit Migration) ──────────────
-    expl_exists = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='explanations'"
-    ).fetchone()
-
-    if not expl_exists:
-        conn.execute("""CREATE TABLE explanations (
+        );
+        
+        CREATE TABLE IF NOT EXISTS explanations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             topic TEXT NOT NULL,
             topic_hash TEXT NOT NULL,
@@ -172,38 +90,74 @@ def init_db():
             explanation TEXT NOT NULL,
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(topic_hash, level)
-        )""")
-        conn.commit()
-    else:
-        schema = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='explanations'"
-        ).fetchone()['sql']
-        if "'easy'" in schema:
-            _migrate_explanations_table(conn)
-
-    # ── Indizes ────────────────────────────────────────────────
-    conn.executescript("""
-        CREATE INDEX IF NOT EXISTS idx_cards_next_review    ON cards(next_review);
-        CREATE INDEX IF NOT EXISTS idx_cards_level          ON cards(level);
-        CREATE INDEX IF NOT EXISTS idx_explanations_hash    ON explanations(topic_hash);
-        CREATE INDEX IF NOT EXISTS idx_review_log_card      ON review_log(card_id);
-        CREATE INDEX IF NOT EXISTS idx_card_tags_card       ON card_tags(card_id);
-        CREATE INDEX IF NOT EXISTS idx_card_tags_tag        ON card_tags(tag_id);
+        );
+        
+        CREATE TABLE IF NOT EXISTS tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        );
+        
+        CREATE TABLE IF NOT EXISTS card_tags (
+            card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+            tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            PRIMARY KEY(card_id, tag_id)
+        );
+        
+        CREATE TABLE IF NOT EXISTS language_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_text TEXT NOT NULL,
+            target_text TEXT NOT NULL,
+            source_lang TEXT DEFAULT 'de',
+            target_lang TEXT DEFAULT 'en',
+            level TEXT NOT NULL CHECK(level IN ('einfach','mittel','fortgeschritten')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ease_factor REAL DEFAULT 2.5,
+            interval_days INTEGER DEFAULT 0,
+            repetitions INTEGER DEFAULT 0,
+            next_review DATE,
+            last_reviewed DATE,
+            review_count INTEGER DEFAULT 0,
+            avg_rating REAL DEFAULT 0
+        );
+        
+        CREATE TABLE IF NOT EXISTS review_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER,
+            card_type TEXT DEFAULT 'knowledge',
+            rating INTEGER NOT NULL CHECK(rating BETWEEN 0 AND 5),
+            reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_cards_next_review ON cards(next_review);
+        CREATE INDEX IF NOT EXISTS idx_cards_level ON cards(level);
+        CREATE INDEX IF NOT EXISTS idx_explanations_hash ON explanations(topic_hash);
+        CREATE INDEX IF NOT EXISTS idx_card_tags_card ON card_tags(card_id);
+        CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag_id);
         CREATE INDEX IF NOT EXISTS idx_language_next_review ON language_cards(next_review);
+        CREATE INDEX IF NOT EXISTS idx_review_log_card ON review_log(card_id, card_type);
     """)
-
+    
+    # Migration: Alte Level-Werte ummappen
+    _migrate_levels(conn, "cards", ("easy","gruendlich","experte"), ("kurz","kompakt","ausfuehrlich"))
+    _migrate_levels(conn, "explanations", ("easy","gruendlich","experte"), ("kurz","kompakt","ausfuehrlich"))
+    
+    # title-Spalte nachtragen falls nicht vorhanden (für Bestands-DBs)
+    cols = [r['name'] for r in conn.execute("PRAGMA table_info(cards)").fetchall()]
+    if 'title' not in cols:
+        conn.execute("ALTER TABLE cards ADD COLUMN title TEXT")
+    
     conn.commit()
     conn.close()
 
 
-# ── Cards CRUD ───────────────────────────────────────────────────
+# ── Cards CRUD ──────────────────────────────────────────────────
 
 def create_card(topic, explanation, level, title=None):
-    """Neue SRS-Karte anlegen. next_review auf heute (sofort fällig)."""
-    if title is None:
-        title = topic
+    """Neue SRS-Karte anlegen."""
     conn = get_db()
     today = date.today().isoformat()
+    if not title:
+        title = topic
     cur = conn.execute(
         "INSERT INTO cards (topic, title, explanation, level, next_review) VALUES (?, ?, ?, ?, ?)",
         (topic, title, explanation, level, today)
@@ -220,23 +174,23 @@ def get_card(card_id):
     return dict(row) if row else None
 
 def get_all_cards():
-    """Alle Karten inkl. Tags."""
     conn = get_db()
-    rows = conn.execute("SELECT * FROM cards ORDER BY created_at DESC").fetchall()
-    cards = [dict(r) for r in rows]
-    for card in cards:
-        tag_rows = conn.execute("""
-            SELECT t.id, t.name FROM tags t
-            JOIN card_tags ct ON ct.tag_id = t.id
-            WHERE ct.card_id = ?
-            ORDER BY t.name
-        """, (card['id'],)).fetchall()
-        card['tags'] = [dict(t) for t in tag_rows]
+    rows = conn.execute("""
+        SELECT c.*, GROUP_CONCAT(t.name, ',') as tag_names
+        FROM cards c
+        LEFT JOIN card_tags ct ON c.id = ct.card_id
+        LEFT JOIN tags t ON ct.tag_id = t.id
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
+    """).fetchall()
     conn.close()
-    return cards
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['tags'] = d.pop('tag_names').split(',') if d.get('tag_names') else []
+        return result
 
 def get_due_cards():
-    """Alle Karten, deren next_review <= heute."""
     conn = get_db()
     today = date.today().isoformat()
     rows = conn.execute(
@@ -247,9 +201,8 @@ def get_due_cards():
     return [dict(r) for r in rows]
 
 def update_card(card_id, **kwargs):
-    """SRS-Felder einer Karte aktualisieren."""
     allowed = {'ease_factor', 'interval_days', 'repetitions', 'next_review',
-               'last_reviewed', 'review_count', 'avg_rating'}
+               'last_reviewed', 'review_count', 'avg_rating', 'title', 'topic', 'explanation'}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return get_card(card_id)
@@ -268,32 +221,33 @@ def delete_card(card_id):
     conn.close()
 
 
-# ── Tags CRUD ────────────────────────────────────────────────────
+# ── Tags CRUD ───────────────────────────────────────────────────
 
 def get_all_tags():
-    """Alle Tags mit Kartenanzahl."""
     conn = get_db()
     rows = conn.execute("""
-        SELECT t.id, t.name, COUNT(ct.card_id) AS card_count
+        SELECT t.id, t.name, COUNT(ct.card_id) as card_count
         FROM tags t
-        LEFT JOIN card_tags ct ON ct.tag_id = t.id
-        GROUP BY t.id, t.name
+        LEFT JOIN card_tags ct ON t.id = ct.tag_id
+        GROUP BY t.id
         ORDER BY t.name
     """).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 def add_tag_to_card(card_id, tag_name):
-    """Tag anlegen (falls nötig) und Karte zuweisen."""
-    tag_name = tag_name.strip().lower()
     conn = get_db()
-    conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name,))
-    tag_row = conn.execute("SELECT id FROM tags WHERE name = ?", (tag_name,)).fetchone()
-    tag_id = tag_row['id']
-    conn.execute("INSERT OR IGNORE INTO card_tags (card_id, tag_id) VALUES (?, ?)", (card_id, tag_id))
+    # Tag ggf. anlegen
+    cur = conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name.strip().lower(),))
+    tag = conn.execute("SELECT id FROM tags WHERE name = ?", (tag_name.strip().lower(),)).fetchone()
+    if not tag:
+        conn.close()
+        return {"error": "Tag konnte nicht angelegt werden"}
+    # Verbindung herstellen
+    conn.execute("INSERT OR IGNORE INTO card_tags (card_id, tag_id) VALUES (?, ?)", (card_id, tag['id']))
     conn.commit()
     conn.close()
-    return {'id': tag_id, 'name': tag_name}
+    return {"id": tag['id'], "name": tag_name.strip().lower()}
 
 def remove_tag_from_card(card_id, tag_id):
     conn = get_db()
@@ -302,19 +256,17 @@ def remove_tag_from_card(card_id, tag_id):
     conn.close()
 
 def get_card_tags(card_id):
-    """Tags für eine Karte."""
     conn = get_db()
     rows = conn.execute("""
         SELECT t.id, t.name FROM tags t
-        JOIN card_tags ct ON ct.tag_id = t.id
+        JOIN card_tags ct ON t.id = ct.tag_id
         WHERE ct.card_id = ?
-        ORDER BY t.name
     """, (card_id,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-# ── Explanations CRUD ────────────────────────────────────────────
+# ── Explanations CRUD ───────────────────────────────────────────
 
 def save_explanations(topic, explanations_dict):
     """explanations_dict: {'kurz': '...', 'kompakt': '...', 'ausfuehrlich': '...'}"""
@@ -322,7 +274,7 @@ def save_explanations(topic, explanations_dict):
     topic_hash = hashlib.md5(topic.strip().lower().encode()).hexdigest()[:12]
     conn = get_db()
     for level, text in explanations_dict.items():
-        if text:
+        if level in ('kurz', 'kompakt', 'ausfuehrlich'):
             conn.execute(
                 "INSERT OR REPLACE INTO explanations (topic, topic_hash, level, explanation) VALUES (?, ?, ?, ?)",
                 (topic, topic_hash, level, text)
@@ -331,7 +283,6 @@ def save_explanations(topic, explanations_dict):
     conn.close()
 
 def get_explanations(topic):
-    """Gespeicherte Erklärungen für ein Topic abrufen."""
     import hashlib
     topic_hash = hashlib.md5(topic.strip().lower().encode()).hexdigest()[:12]
     conn = get_db()
@@ -342,27 +293,13 @@ def get_explanations(topic):
     return {r['level']: r['explanation'] for r in rows}
 
 
-# ── Review Log ───────────────────────────────────────────────────
+# ── Language Cards CRUD ─────────────────────────────────────────
 
-def add_review(card_id, rating):
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO review_log (card_id, rating) VALUES (?, ?)",
-        (card_id, rating)
-    )
-    conn.commit()
-    conn.close()
-
-
-# ── Language Cards CRUD ──────────────────────────────────────────
-
-def create_language_card(source_text, target_text, source_lang, target_lang, level):
+def create_language_card(source_text, target_text, source_lang='de', target_lang='en', level='einfach'):
     conn = get_db()
     today = date.today().isoformat()
     cur = conn.execute(
-        """INSERT INTO language_cards
-           (source_text, target_text, source_lang, target_lang, level, next_review)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+        "INSERT INTO language_cards (source_text, target_text, source_lang, target_lang, level, next_review) VALUES (?, ?, ?, ?, ?, ?)",
         (source_text, target_text, source_lang, target_lang, level, today)
     )
     card_id = cur.lastrowid
@@ -386,15 +323,14 @@ def get_due_language_cards():
     conn = get_db()
     today = date.today().isoformat()
     rows = conn.execute(
-        "SELECT * FROM language_cards WHERE next_review <= ? ORDER BY next_review ASC",
-        (today,)
+        "SELECT * FROM language_cards WHERE next_review <= ? ORDER BY next_review ASC", (today,)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 def update_language_card(card_id, **kwargs):
     allowed = {'ease_factor', 'interval_days', 'repetitions', 'next_review',
-               'last_reviewed', 'review_count', 'avg_rating'}
+               'last_reviewed', 'review_count', 'avg_rating', 'target_text'}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return get_language_card(card_id)
@@ -413,7 +349,19 @@ def delete_language_card(card_id):
     conn.close()
 
 
-# ── Statistics ───────────────────────────────────────────────────
+# ── Review Log ──────────────────────────────────────────────────
+
+def add_review(card_id, rating, card_type='knowledge'):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO review_log (card_id, card_type, rating) VALUES (?, ?, ?)",
+        (card_id, card_type, rating)
+    )
+    conn.commit()
+    conn.close()
+
+
+# ── Statistics ──────────────────────────────────────────────────
 
 def get_stats():
     conn = get_db()
@@ -422,12 +370,16 @@ def get_stats():
     due = conn.execute(
         "SELECT COUNT(*) as n FROM cards WHERE next_review <= ?", (today,)
     ).fetchone()['n']
-    avg = conn.execute(
-        "SELECT AVG(avg_rating) as a FROM cards WHERE review_count > 0"
-    ).fetchone()['a']
+    avg = conn.execute("SELECT AVG(avg_rating) as a FROM cards WHERE review_count > 0").fetchone()['a']
+    lang_total = conn.execute("SELECT COUNT(*) as n FROM language_cards").fetchone()['n']
+    lang_due = conn.execute(
+        "SELECT COUNT(*) as n FROM language_cards WHERE next_review <= ?", (today,)
+    ).fetchone()['n']
     conn.close()
     return {
         "total": total,
         "due": due,
-        "avg_rating": round(avg, 2) if avg else 0
+        "avg_rating": round(avg, 2) if avg else 0,
+        "language_total": lang_total,
+        "language_due": lang_due
     }
