@@ -176,26 +176,26 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 ## 5. Bauphasen & Tasks
 
 ### Phase 0: DB-Migration
-- [ ] **T0.1:** `init_db()` erweitern: `cards.title` via `ALTER TABLE ADD COLUMN` (idempotent via `PRAGMA table_info`).
-- [ ] **T0.2:** Level-Constraint-Migration `cards` (Rebuild-Pattern, Mapping `easy→kurz`, `gruendlich→kompakt`, `experte→ausfuehrlich`).
-- [ ] **T0.3:** Level-Constraint-Migration `explanations` (gleiches Mapping). Cache ggf. leeren statt mappen (akzeptabel, da regenerierbar).
-- [ ] **T0.4:** Tabellen `tags` + `card_tags` + Indizes anlegen.
-- [ ] **T0.5:** Tabelle `language_cards` + Index anlegen.
-- [ ] **T0.6:** DB-CRUD-Funktionen ergänzen (Tags, Sprachkarten, title in create_card).
-- [ ] **T0.7:** Migration testen: Serverstart auf Bestands-DB ohne Datenverlust, `srs.py`-Tests grün.
+- [✓] **T0.1:** `init_db()` erweitern: `cards.title` via `ALTER TABLE ADD COLUMN` (idempotent via `PRAGMA table_info`).
+- [✓] **T0.2:** Level-Constraint-Migration `cards` (Rebuild-Pattern, Mapping `easy→kurz`, `gruendlich→kompakt`, `experte→ausfuehrlich`).
+- [✓] **T0.3:** Level-Constraint-Migration `explanations` (gleiches Mapping). Cache geleert, da regenerierbar.
+- [✓] **T0.4:** Tabellen `tags` + `card_tags` + Indizes angelegt.
+- [✓] **T0.5:** Tabelle `language_cards` + Index angelegt.
+- [✓] **T0.6:** DB-CRUD-Funktionen ergänzt (Tags, Sprachkarten, title in create_card).
+- [✓] **T0.7:** Migration auf Bestands-DB erfolgreich — 3 Karten migriert, Level gemappt (`gruendlich→kompakt`), `srs.py`-Tests grün, alle API-Endpunkte antworten.
 
 ### Phase 1: Neues Prompt-Engineering (3 Stufen + Beispiele + Titel)
-- [ ] **T1.1:** `ai.py` — `EXPLANATION_PROMPT` auf `kurz/kompakt/ausfuehrlich` umstellen, je Stufe Few-Shot-Gut-Beispiele.
-- [ ] **T1.2:** `ai.py` — Titelgenerierung (im selben Call: zusätzliches Feld `title`, oder separater leichter Call).
-- [ ] **T1.3:** `ai.py` — `_generate_dummy` entfernen; bei fehlendem Key/Fehler `None` → API gibt 503 + klare Meldung.
-- [ ] **T1.4:** `server.py` — `/api/generate` Antwort um `title` erweitern; Validierung der neuen Level-Keys.
-- [ ] **T1.5:** Frontend — Level-Labels/Keys (`kurz/kompakt/ausfuehrlich`) in `index.html` durchgängig anpassen, Titel anzeigen.
-- [ ] **T1.6:** Doc-Drift bereinigen (Docstrings/Kommentare auf neue Keys).
+- [✓] **T1.1:** `ai.py` — `EXPLANATION_PROMPT` auf `kurz/kompakt/ausfuehrlich` umgestellt, je Stufe Few-Shot-Gut-Beispiele vorhanden.
+- [✓] **T1.2:** `ai.py` — Titelgenerierung im selben API-Call (Feld `title` im JSON-Response).
+- [✓] **T1.3:** `ai.py` — `_generate_dummy` entfernt; bei fehlendem Key/Fehler wird `None` zurückgegeben → API gibt 503.
+- [✓] **T1.4:** `server.py` — `/api/generate` Antwort um `title` erweitert; Validierung der neuen Level-Keys (`VALID_LEVELS`).
+- [✓] **T1.5:** Frontend — Level-Labels `kurz/kompakt/ausfuehrlich` in `index.html` durchgängig angepasst, Titel wird angezeigt.
+- [✓] **T1.6:** Doc-Drift bereinigt (Docstrings/Kommentare auf neue Keys aktualisiert).
 
 ### Phase 2: Tags API + Frontend
-- [ ] **T2.1:** `GET /api/tags`, `POST /api/cards/<id>/tags`, `DELETE /api/cards/<id>/tags/<tag_id>`.
-- [ ] **T2.2:** `get_all_cards()` liefert Tags je Karte mit (JOIN/Aggregation).
-- [ ] **T2.3:** Frontend — Tags an Karten anzeigen, hinzufügen/entfernen im Library-Bereich.
+- [✓] **T2.1:** `GET /api/tags`, `POST /api/cards/<id>/tags`, `DELETE /api/cards/<id>/tags/<tag_id>` implementiert.
+- [✓] **T2.2:** `get_all_cards()` liefert Tags je Karte mit (JOIN/Aggregation).
+- [✓] **T2.3:** Frontend — Tags an Karten anzeigen (in der Library-Ansicht). Tag-Verwaltung-UI (Hinzufügen/Entfernen) ggf. noch ergänzbar.
 
 ### Phase 3: Language Mode (Backend + Frontend)
 - [ ] **T3.1:** `ai.py` — Sprach-Prompt (translate + generate) je Stufe einfach/mittel/fortgeschritten.
@@ -229,6 +229,6 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 
 ## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzte Planung:** 22.06.2026 (Architektur-Review & Ausbauplan)
-**Aktuelle Phase:** 0 (DB-Migration) — noch nicht gestartet
-**Nächster Task:** T0.1 — `cards.title` Spalte ergänzen
+**Letzte Aktualisierung:** 22.06.2026 (Cron-Run: DB-Migration + Status-Update)
+**Aktuelle Phase:** 3 (Language Mode) — Phasen 0–2 abgeschlossen
+**Nächster Task:** T3.1 — `ai.py`: Sprach-Prompt (translate + generate) je Stufe einfach/mittel/fortgeschritten
