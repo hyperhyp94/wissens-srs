@@ -1,220 +1,234 @@
-# Wissens-SRS — Knowledge Spaced Repetition System
+# Wissens-SRS — Architektur- & Ausbauplan
 
-> **Für den Cron-Job:** Dies ist dein Bauplan. Lies diese Datei, prüfe den aktuellen Stand, und arbeite Task für Task ab. Wenn ein Task fehlschlägt, fixe den Fehler zuerst, dann mach weiter.
+> **Für den Cron-Job:** Dies ist dein Bauplan. Lies diese Datei, prüfe den aktuellen Stand, und arbeite Task für Task ab. Wenn ein Task fehlschlägt, fixe den Fehler zuerst, dann mach weiter. Arbeite ausschliesslich im Verzeichnis `/home/sven/hermes-workspace/projects/wissens-srs`.
 
-**Ziel:** Eine Web-App, in die man beliebige Themen/Wissensschnipsel eingibt, KI-generierte Erklärungen auf 3 Niveaustufen bekommt, die beste Erklärung auswählt und ins SRS-System (Spaced Repetition à la Anki) übernimmt. Das Wissen wird dann periodisch (1 Tag, 3 Tage, 1 Woche, 2 Wochen...) zur Wiederholung vorgelegt.
+**Ziel:** Eine Web-App, in die man beliebige Themen/Wissensschnipsel eingibt, KI-generierte Erklärungen auf 3 Niveaustufen bekommt, die beste Erklärung auswählt und ins SRS-System (Spaced Repetition à la Anki) übernimmt. Erweitert um Titel, Tags, eine überarbeitete Bibliothek, einen Random-Modus und einen separaten Sprach-Lernmodus.
 
-**Architektur:** Flask-Backend (server.py) + Vanilla HTML/JS Frontend (index.html) + SQLite-Datenbank + OpenRouter API für KI-Erklärungen. SM-2-Algorithmus für SRS.
-
-**Tech Stack:** Python 3, Flask, SQLite, Tailwind CSS CDN, Vanilla JS, OpenRouter API
+**Tech Stack:** Python 3, Flask, SQLite, Tailwind CSS CDN, Vanilla JS, OpenRouter API, SM-2.
 
 **Port:** 5111
 
 ---
 
-## Datenmodell (SQLite)
+## 1. Aktuelle Architektur (Ist-Zustand)
 
-### Tabelle: `cards`
-```sql
-CREATE TABLE cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    topic TEXT NOT NULL,              -- Das ursprüngliche Thema (z.B. "Wie entstehen Wolken?")
-    explanation TEXT NOT NULL,        -- Die ausgewählte Erklärung
-    level TEXT NOT NULL,              -- 'easy' | 'abitur' | 'professor'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    -- SRS Felder (SM-2)
-    ease_factor REAL DEFAULT 2.5,     -- Start-Ease (ändert sich mit Bewertungen)
-    interval_days INTEGER DEFAULT 0,  -- Aktuelles Intervall in Tagen
-    repetitions INTEGER DEFAULT 0,    -- Anzahl erfolgreicher Wiederholungen
-    next_review DATE,                 -- Nächster Fälligkeitstermin
-    last_reviewed DATE,               -- Letztes Review-Datum
-    -- Metadaten
-    review_count INTEGER DEFAULT 0,   -- Wie oft insgesamt reviewed
-    avg_rating REAL DEFAULT 0         -- Durchschnittliche Bewertung (0-5)
-);
-```
+### Was bereits läuft
+- **Flask-Backend** (`server.py`): statische Auslieferung von `index.html`, JSON-API. Start über `TOOL_PORT` (Default 5111).
+- **SQLite** (`database.py`): `get_db()` mit `row_factory`, WAL-Modus, `foreign_keys=ON`. DB unter `data/wissens.db`. Idempotentes `init_db()`.
+- **SM-2 Algorithmus** (`srs.py`): `sm2(card, rating)` mit Rating 0–5, Ease-Faktor (min. 1.3), Intervall-Eskalation (1 → 3 → interval×ease), Reset bei Rating < 3, gleitender Bewertungsdurchschnitt. Eingebaute Unit-Tests via `python srs.py`.
+- **KI-Erklärungen** (`ai.py`): OpenRouter (`openai/gpt-4o-mini`), `generate_explanations(topic)` mit Cache-Lookup, JSON-Antwort. **Dummy-Fallback** (`_generate_dummy`) bei fehlendem Key/Fehler.
+- **Frontend** (`index.html`): Single-Page, Tailwind CDN, Vanilla JS. Drei Seiten: Dashboard, Lernen (Review), Bibliothek. Mobile Bottom-Nav + Desktop-Topbar.
 
-### Tabelle: `explanations` (Cache für generierte Erklärungen)
-```sql
-CREATE TABLE explanations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    card_id INTEGER REFERENCES cards(id),
-    topic TEXT NOT NULL,
-    level TEXT NOT NULL,              -- 'easy' | 'abitur' | 'professor'
-    explanation TEXT NOT NULL,
-    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+### Datenmodell (Ist)
+- **`cards`**: `id, topic, explanation, level CHECK(easy|gruendlich|experte), created_at, ease_factor, interval_days, repetitions, next_review, last_reviewed, review_count, avg_rating`.
+- **`explanations`** (Cache): `id, topic, topic_hash (md5[:12]), level CHECK(easy|gruendlich|experte), explanation, generated_at`, `UNIQUE(topic_hash, level)`.
+- **`review_log`**: `id, card_id → cards(id) ON DELETE CASCADE, rating CHECK(0–5), reviewed_at`.
+- Indizes: `idx_cards_next_review`, `idx_cards_level`, `idx_explanations_hash`, `idx_review_log_card`.
 
-### Tabelle: `review_log`
-```sql
-CREATE TABLE review_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    card_id INTEGER REFERENCES cards(id),
-    rating INTEGER NOT NULL,          -- 0-5 (SM-2 quality)
-    reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
----
-
-## API Endpoints (Flask)
-
+### API-Endpunkte (Ist)
 | Methode | Pfad | Beschreibung |
 |---------|------|-------------|
 | GET | `/` | Frontend (index.html) |
-| POST | `/api/generate` | Erklärungen generieren (Body: `{topic: "..."}`) |
-| GET | `/api/explanations/<topic_hash>` | Generierte Erklärungen abrufen |
-| POST | `/api/cards` | Karte erstellen (Body: `{topic, explanation, level}`) |
-| GET | `/api/cards` | Alle Karten (mit SRS-Status) |
-| GET | `/api/cards/due` | Fällige Karten für heute |
-| POST | `/api/cards/<id>/review` | Karte reviewen (Body: `{rating: 0-5}`) |
-| GET | `/api/stats` | Statistiken (Total, Fällig, Durchschnitt) |
+| POST | `/api/generate` | Erklärungen generieren (Body: `{topic}`) |
+| GET | `/api/explanations/<topic>` | Gecachte Erklärungen abrufen |
+| GET/POST | `/api/cards` | Alle Karten / Karte erstellen (`{topic, explanation, level}`) |
+| GET | `/api/cards/due` | Heute fällige Karten |
+| DELETE | `/api/cards/<id>` | Karte löschen |
+| POST | `/api/cards/<id>/review` | Review mit SM-2 (`{rating: 0-5}`) |
+| GET | `/api/stats` | Statistiken (total, due, avg_rating) |
+
+### Bekannte Inkonsistenzen / technische Schuld
+- **Level-Naming:** Commit `3be4afc` benannte UI-Labels in "Einfach/Gründlich/Experte" um, die DB-Keys bleiben `easy`/`gruendlich`/`experte`. Die neuen Stufen (siehe Feature 1) erfordern Migration der `CHECK`-Constraints in `cards` UND `explanations`.
+- **Dummy-Fallback:** `_generate_dummy()` liefert generische Platzhaltertexte — laut neuem Ziel komplett zu entfernen.
+- **Doc-Drift:** Docstrings in `ai.py`/`database.py` nennen teils alte Keys (`abitur`, `professor`).
+- **AGENTS.md:** Unter `/home/sven/hermes-workspace/projects/AGENTS.md` nicht vorhanden (Stand dieser Analyse). Projektregeln daher aus dieser PLAN.md ableiten.
 
 ---
 
-## SM-2 Algorithmus (vereinfacht, Python)
+## 2. Neue Features (alle einplanen)
 
-```python
-def sm2(card, rating):
-    """rating: 0-5 (0=komplett vergessen, 5=perfekt erinnert)"""
-    if rating >= 3:
-        if card['repetitions'] == 0:
-            card['interval_days'] = 1
-        elif card['repetitions'] == 1:
-            card['interval_days'] = 3
-        else:
-            card['interval_days'] = round(card['interval_days'] * card['ease_factor'])
-        card['repetitions'] += 1
-    else:
-        card['repetitions'] = 0
-        card['interval_days'] = 1
-    
-    # Ease-Faktor anpassen
-    card['ease_factor'] = max(1.3, card['ease_factor'] + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02)))
-    
-    # Nächsten Review-Termin setzen
-    from datetime import date, timedelta
-    card['next_review'] = (date.today() + timedelta(days=card['interval_days'])).isoformat()
-    card['last_reviewed'] = date.today().isoformat()
-    card['review_count'] += 1
-    
-    return card
+### Feature 1 — Drei neue Erklärungs-Stufen
+Ersetzt `easy/gruendlich/experte` durch:
+- **`kurz`** (Kurz & Knapp): 2–3 knackige Sätze, maximal kompakt.
+- **`kompakt`** (Kompakt): 4–6 Sätze, gute Abdeckung.
+- **`ausfuehrlich`** (Ausführlich): 8–12 Sätze, tiefgehend, wissenschaftlich.
+
+Anforderungen:
+- **KEIN Dummy-Fallback mehr.** Bei fehlendem API-Key oder API-Fehler → sauberer HTTP-Fehler (z. B. 503 mit klarer Meldung), keine Platzhaltertexte.
+- Der Prompt muss **ZWINGEND Beispiel-Gute-Erklärungen** je Stufe enthalten (Few-Shot, analog zu den bestehenden „Gut/Schlecht"-Beispielen).
+- JSON-Schema der KI-Antwort: `{"kurz": "...", "kompakt": "...", "ausfuehrlich": "..."}`.
+
+### Feature 2 — Titelgenerierung
+- Beim Erstellen einer Karte generiert die KI automatisch einen **prägnanten Titel** (Kurzbezeichnung des Themas).
+- Titel wird im Dashboard und in der Bibliothek angezeigt.
+- Datenmodell: `cards.title TEXT` (per `ALTER TABLE`, nullable für Bestandskarten; Fallback im Frontend = `topic`).
+
+### Feature 3 — Tags / Kategorien
+- Jede Karte bekommt ein oder mehrere Tags.
+- Neue Tabellen:
+  - `tags (id INTEGER PK, name TEXT UNIQUE NOT NULL)`
+  - `card_tags (card_id → cards(id) ON DELETE CASCADE, tag_id → tags(id) ON DELETE CASCADE, PRIMARY KEY(card_id, tag_id))`
+- API:
+  - `GET /api/tags` — alle Tags (optional mit Kartenanzahl).
+  - `POST /api/cards/<id>/tags` — Tag zuweisen (`{name}` oder `{tag_id}`; legt Tag bei Bedarf an).
+  - `DELETE /api/cards/<id>/tags/<tag_id>` — Tag von Karte entfernen.
+- Frontend: Tags vergeben/anzeigen im Library-Bereich, Filter nach Tags, Suche.
+
+### Feature 4 — Library-Ansicht verbessern
+- Alle Karten als Liste mit **Titel, Tags, Level, nächstem Review**.
+- **Suchfeld** (Volltext über Titel/Topic/Erklärung, clientseitig).
+- **Tag-Filter** (Multiple Select).
+- **Sortierung**: Erstelldatum, nächster Review, Level.
+
+### Feature 5 — Random-Modus
+- Button „Zufälliges Thema" im Dashboard.
+- User wählt eine **Kategorie** (z. B. „Gemüse", „Physik", „Tiere").
+- KI wählt **ein konkretes Thema aus dieser Kategorie** und erklärt es sofort (3 Stufen wie Feature 1).
+- Beispiel: Kategorie „Gemüse" → KI wählt „Radieschen" → 3 Erklärungen + Titel.
+- API: `POST /api/random` (Body: `{category}`) → `{topic, title, explanations}`.
+
+### Feature 6 — Sprach-Modus (separater Bereich)
+- Neuer Navigationsbereich „Sprachen".
+- 3 Stufen: **Einfach** (Grundwortschatz), **Mittel** (Alltagssätze), **Fortgeschritten** (komplexe Texte).
+- Zwei Eingabe-Flüsse:
+  1. User gibt Wort/deutschen Satz ein → KI übersetzt in Zielsprache (z. B. Englisch).
+  2. KI generiert Satz in Zielsprache + deutsche Übersetzung (passend zur Stufe).
+- SRS funktioniert identisch wie für Wissenskarten.
+- Eigene Tabelle:
+  `language_cards (id, source_text, target_text, source_lang, target_lang, level CHECK(einfach|mittel|fortgeschritten), created_at, + alle SM-2-Felder identisch zu cards)`.
+- API:
+  - `POST /api/language/generate` (`{text?, mode: translate|generate, target_lang, level}`) → Quelltext/Zieltext.
+  - `GET/POST /api/language/cards` — Sprachkarten listen/erstellen.
+  - `GET /api/language/cards/due`, `POST /api/language/cards/<id>/review`, `DELETE /api/language/cards/<id>`.
+
+### Feature 7 — Datenmodell-Erweiterungen (Zusammenfassung)
+- `cards.title` hinzufügen.
+- `tags` + `card_tags` für Tagging.
+- `language_cards` neue Tabelle (SM-2-Felder 1:1 wie `cards`).
+- Level-Constraints in `cards`/`explanations` auf `kurz|kompakt|ausfuehrlich` migrieren.
+
+### Feature 8 — Mobile & Performance
+- **Service Worker** für Offline-Fähigkeit (PWA): `manifest.json` + `sw.js`, App-Shell-Caching.
+- CSS/JS minifiziert (optional).
+- **Lazy Loading** für die Bibliothek (paginiert/inkrementell rendern).
+- Keine externen Abhängigkeiten außer Tailwind CDN.
+
+---
+
+## 3. Ziel-Datenmodell (Soll)
+
+```sql
+-- cards: + title, Level-Keys neu
+cards(
+  id, topic, title, explanation,
+  level CHECK(level IN ('kurz','kompakt','ausfuehrlich')),
+  created_at, ease_factor, interval_days, repetitions,
+  next_review, last_reviewed, review_count, avg_rating
+)
+
+explanations(
+  id, topic, topic_hash,
+  level CHECK(level IN ('kurz','kompakt','ausfuehrlich')),
+  explanation, generated_at, UNIQUE(topic_hash, level)
+)
+
+tags(id PK, name TEXT UNIQUE NOT NULL)
+card_tags(card_id FK→cards, tag_id FK→tags, PRIMARY KEY(card_id, tag_id))
+
+language_cards(
+  id, source_text, target_text, source_lang, target_lang,
+  level CHECK(level IN ('einfach','mittel','fortgeschritten')),
+  created_at, ease_factor, interval_days, repetitions,
+  next_review, last_reviewed, review_count, avg_rating
+)
+
+review_log: unverändert (für Sprachkarten ggf. card_type-Spalte oder separates language_review_log)
 ```
 
----
+Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next_review`.
 
-## UI-Design
-
-### Seiten:
-1. **Startseite / Dashboard:** Übersicht: X Karten insgesamt, Y heute fällig. Sucheingabe für neues Thema.
-2. **Erklärungs-Auswahl:** Nach Themeneingabe: 3 Karten (Kinderleicht, Abitur, Professor) parallel anzeigen. User wählt eine aus → wird zur SRS-Karte.
-3. **Review-Modus:** Fällige Karten nacheinander anzeigen. User liest Erklärung, bewertet dann 0-5. Nächste Karte.
-4. **Bibliothek:** Alle Karten, filterbar, sortierbar.
-
-### Mobile First! (375px Breite)
-- Bottom-Navigation auf Mobile
-- Karten als Stack-Layout
-- Touch-Ziele min. 44×44px
+**Migrationsstrategie (SQLite):** Da SQLite `CHECK`-Constraints nicht per `ALTER` ändern kann, erfolgt die Level-Migration über das Table-Rebuild-Pattern (neue Tabelle anlegen → Daten kopieren/mappen → alte droppen → umbenennen). Bestehende Level-Werte werden gemappt: `easy→kurz`, `gruendlich→kompakt`, `experte→ausfuehrlich`. `cards.title` via `ALTER TABLE ADD COLUMN`. Alle Schritte idempotent in `init_db()` mit Versions-/Existenzprüfung (`PRAGMA table_info`).
 
 ---
 
-## Bauphasen & Tasks
+## 4. Ziel-API (Soll, Überblick)
 
-### Phase 0: Projekt-Grundgerüst
-- [✓] **T0.1:** `server.py` mit Flask-Grundgerüst (alle Routen als Stubs)
-- [✓] **T0.2:** `index.html` Grundgerüst (leere Seite mit Nav)
-- [✓] **T0.3:** `META.json` anlegen
-- [✓] **T0.4:** `requirements.txt` (flask)
-- [✓] **T0.5:** Server starten, curl-Test: HTTP 200
-
-### Phase 1: Datenbank & Datenmodell
-- [✓] **T1.1:** `database.py` — SQLite-Init, `init_db()` Funktion, Tabellen erstellen
-- [✓] **T1.2:** `database.py` — CRUD-Funktionen für cards (create, get_all, get_due, get_by_id, update, delete)
-- [✓] **T1.3:** `database.py` — Funktionen für explanations (save, get_by_topic)
-- [✓] **T1.4:** `database.py` — Funktion für review_log (add_entry)
-- [✓] **T1.5:** Test: DB wird bei Serverstart initialisiert
-
-### Phase 2: SRS-Algorithmus
-- [✓] **T2.1:** `srs.py` — `sm2(card, rating)` Funktion
-- [✓] **T2.2:** `srs.py` — Unit-Test mit bekannten SM-2 Werten
-- [✓] **T2.3:** Integration in API: Review-Endpoint nutzt sm2()
-
-### Phase 3: KI-Erklärungsgenerierung
-- [✓] **T3.1:** `ai.py` — `generate_explanations(topic)` via OpenRouter API
-- [✓] **T3.2:** Prompt-Engineering: 3 Niveaustufen (Kinderleicht, Abitur, Professor)
-- [✓] **T3.3:** Fallback: Wenn API-Key fehlt → Dummy-Erklärungen (damit App testbar bleibt)
-- [✓] **T3.4:** `/api/generate` Endpoint implementieren
-
-### Phase 4: API-Endpunkte (echte Implementierung)
-- [✓] **T4.1:** `POST /api/generate` — nimmt Topic, ruft KI, speichert Explanations, returned sie
-- [✓] **T4.2:** `GET /api/explanations` — cached Explanations für Topic zurückgeben
-- [✓] **T4.3:** `POST /api/cards` — Karte aus selektierter Explanation erstellen
-- [✓] **T4.4:** `GET /api/cards/due` — alle heute fälligen Karten
-- [✓] **T4.5:** `POST /api/cards/<id>/review` — Review mit SM-2
-- [✓] **T4.6:** `GET /api/stats` — Statistiken
-- [✓] **T4.7:** Alle Endpunkte mit curl durchtesten
-
-### Phase 5: Frontend — Dashboard
-- [✓] **T5.1:** Dashboard-Layout: Stats-Karten oben, "Neues Thema"-Input
-- [✓] **T5.2:** Stats live von `/api/stats` laden
-- [✓] **T5.3:** "Fällige Karten"-Sektion (falls due > 0)
-- [✓] **T5.4:** Mobile-optimiert (Bottom-Nav)
-
-### Phase 6: Frontend — Erklärungsauswahl
-- [✓] **T6.1:** Nach Themeneingabe: Loading-Spinner, dann 3 Erklärungskarten
-- [✓] **T6.2:** Jede Karte zeigt: Level-Label, Erklärungstext, "Auswählen"-Button
-- [✓] **T6.3:** Bei Auswahl: Karte wird per API erstellt, Redirect zum Dashboard
-- [✓] **T6.4:** Error-Handling (API down, keine Erklärungen, etc.)
-
-### Phase 7: Frontend — Review-Modus
-- [✓] **T7.1:** Review-Seite: zeigt eine Karte (Erklärung lesen)
-- [✓] **T7.2:** Nach Lesen: "Aufdecken"-Button → Bewertungs-Buttons (0-5)
-- [✓] **T7.3:** Bei Bewertung: API-Call, nächste Karte laden
-- [✓] **T7.4:** "Keine weiteren Karten"-State
-- [✓] **T7.5:** Mobile: Swipe-Gesten? Oder große Tasten (44px+)
-
-### Phase 8: Frontend — Bibliothek
-- [✓] **T8.1:** Alle Karten als Liste (Topic, Level, nächster Review)
-- [✓] **T8.2:** Suche/Filter (nach Topic, Level)
-- [✓] **T8.3:** Karte löschen können
-
-### Phase 9: Polish & Testing
-- [✓] **T9.1:** Responsive Design verfeinern (iPhone SE 375px)
-- [ ] **T9.2:** Dark Mode? (optional) — übersprungen (Cron-Job, optional)
-- [✓] **T9.3:** Alle Edge Cases testen — 23 Tests durchgeführt, 3 Bugs gefixed (escAttr, splice(-1), max topic length)
-- [✓] **T9.4:** Performance: DB-Indizes geprüft — 4 Indizes vorhanden, korrekt
-- [✓] **T9.5:** README.md schreiben
+| Methode | Pfad | Zweck |
+|---------|------|------|
+| POST | `/api/generate` | 3 Erklärungen (kurz/kompakt/ausfuehrlich) + Titel |
+| POST | `/api/random` | Thema aus Kategorie wählen + erklären |
+| GET/POST | `/api/cards` | Karten listen / erstellen (mit title) |
+| GET | `/api/cards/due` | Fällige Wissenskarten |
+| POST | `/api/cards/<id>/review` | SM-2 Review |
+| DELETE | `/api/cards/<id>` | Karte löschen |
+| GET | `/api/tags` | Tags auflisten |
+| POST | `/api/cards/<id>/tags` | Tag zuweisen |
+| DELETE | `/api/cards/<id>/tags/<tag_id>` | Tag entfernen |
+| POST | `/api/language/generate` | Übersetzen/Satz generieren |
+| GET/POST | `/api/language/cards` | Sprachkarten listen/erstellen |
+| GET | `/api/language/cards/due` | Fällige Sprachkarten |
+| POST | `/api/language/cards/<id>/review` | SM-2 Review (Sprache) |
+| DELETE | `/api/language/cards/<id>` | Sprachkarte löschen |
+| GET | `/api/stats` | Statistiken (inkl. Sprachkarten) |
 
 ---
 
-## Status-Legende
-- `[ ]` = nicht gestartet
-- `[~]` = in Arbeit
-- `[✓]` = fertig
-- `[✗]` = fehlgeschlagen (muss gefixt werden)
+## 5. Bauphasen & Tasks
+
+### Phase 0: DB-Migration
+- [ ] **T0.1:** `init_db()` erweitern: `cards.title` via `ALTER TABLE ADD COLUMN` (idempotent via `PRAGMA table_info`).
+- [ ] **T0.2:** Level-Constraint-Migration `cards` (Rebuild-Pattern, Mapping `easy→kurz`, `gruendlich→kompakt`, `experte→ausfuehrlich`).
+- [ ] **T0.3:** Level-Constraint-Migration `explanations` (gleiches Mapping). Cache ggf. leeren statt mappen (akzeptabel, da regenerierbar).
+- [ ] **T0.4:** Tabellen `tags` + `card_tags` + Indizes anlegen.
+- [ ] **T0.5:** Tabelle `language_cards` + Index anlegen.
+- [ ] **T0.6:** DB-CRUD-Funktionen ergänzen (Tags, Sprachkarten, title in create_card).
+- [ ] **T0.7:** Migration testen: Serverstart auf Bestands-DB ohne Datenverlust, `srs.py`-Tests grün.
+
+### Phase 1: Neues Prompt-Engineering (3 Stufen + Beispiele + Titel)
+- [ ] **T1.1:** `ai.py` — `EXPLANATION_PROMPT` auf `kurz/kompakt/ausfuehrlich` umstellen, je Stufe Few-Shot-Gut-Beispiele.
+- [ ] **T1.2:** `ai.py` — Titelgenerierung (im selben Call: zusätzliches Feld `title`, oder separater leichter Call).
+- [ ] **T1.3:** `ai.py` — `_generate_dummy` entfernen; bei fehlendem Key/Fehler `None` → API gibt 503 + klare Meldung.
+- [ ] **T1.4:** `server.py` — `/api/generate` Antwort um `title` erweitern; Validierung der neuen Level-Keys.
+- [ ] **T1.5:** Frontend — Level-Labels/Keys (`kurz/kompakt/ausfuehrlich`) in `index.html` durchgängig anpassen, Titel anzeigen.
+- [ ] **T1.6:** Doc-Drift bereinigen (Docstrings/Kommentare auf neue Keys).
+
+### Phase 2: Tags API + Frontend
+- [ ] **T2.1:** `GET /api/tags`, `POST /api/cards/<id>/tags`, `DELETE /api/cards/<id>/tags/<tag_id>`.
+- [ ] **T2.2:** `get_all_cards()` liefert Tags je Karte mit (JOIN/Aggregation).
+- [ ] **T2.3:** Frontend — Tags an Karten anzeigen, hinzufügen/entfernen im Library-Bereich.
+
+### Phase 3: Language Mode (Backend + Frontend)
+- [ ] **T3.1:** `ai.py` — Sprach-Prompt (translate + generate) je Stufe einfach/mittel/fortgeschritten.
+- [ ] **T3.2:** `POST /api/language/generate` + DB-CRUD für `language_cards`.
+- [ ] **T3.3:** `GET/POST /api/language/cards`, `due`, `review`, `DELETE` (SM-2 wiederverwenden).
+- [ ] **T3.4:** Frontend — neuer Tab „Sprachen": Eingabe, Stufenwahl, Zielsprache, Speichern, eigener Review-Flow.
+
+### Phase 4: Random Mode
+- [ ] **T4.1:** `ai.py` — Prompt „wähle Thema aus Kategorie".
+- [ ] **T4.2:** `POST /api/random` → Thema + Titel + 3 Erklärungen.
+- [ ] **T4.3:** Frontend — Button „Zufälliges Thema" + Kategorie-Eingabe, Ergebnis wie normale Erklärungsauswahl.
+
+### Phase 5: Library-Rework (Search, Filter, Sort)
+- [ ] **T5.1:** Suchfeld (Volltext clientseitig über Titel/Topic/Erklärung).
+- [ ] **T5.2:** Tag-Filter (Multiple Select).
+- [ ] **T5.3:** Sortierung (Erstelldatum / nächster Review / Level).
+- [ ] **T5.4:** Anzeige: Titel, Tags, Level, nächster Review je Eintrag.
+
+### Phase 6: Polish (PWA, Performance, Mobile)
+- [ ] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
+- [ ] **T6.2:** Lazy Loading / inkrementelles Rendern der Bibliothek.
+- [ ] **T6.3:** Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen.
+- [ ] **T6.4:** Optional: CSS/JS minifizieren. Edge Cases & curl-Tests aller neuen Endpunkte.
 
 ---
 
-## OpenRouter API Prompt-Template
-
-```
-System: Du bist ein Wissensvermittler. Erkläre das folgende Thema auf drei verschiedenen Niveaustufen.
-Antworte NUR mit einem JSON-Objekt:
-
-{
-  "easy": "Erklärung für ein 8-jähriges Kind. Einfache Worte, bildhaft, kurz (2-3 Sätze).",
-  "abitur": "Erklärung auf Abitur-Niveau. Fachbegriffe erklärt, logischer Aufbau (4-6 Sätze).",
-  "professor": "Erklärung auf Universitäts-Niveau. Wissenschaftlich präzise, mit Fachterminologie (6-10 Sätze)."
-}
-
-Thema: {topic}
-```
+## 6. Status-Legende
+- `[ ]` = nicht gestartet · `[~]` = in Arbeit · `[✓]` = fertig · `[✗]` = fehlgeschlagen (zuerst fixen)
 
 ---
 
-## Fortschritt (wird vom Cron-Job aktualisiert)
+## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzter Run:** 22.06.2026 22:00 (Cron)
-**Aktuelle Phase:** 9 (Polish) — ABGESCHLOSSEN ✅
-**Nächster Task:** keiner — alle Tasks fertig
+**Letzte Planung:** 22.06.2026 (Architektur-Review & Ausbauplan)
+**Aktuelle Phase:** 0 (DB-Migration) — noch nicht gestartet
+**Nächster Task:** T0.1 — `cards.title` Spalte ergänzen
