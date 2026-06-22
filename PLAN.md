@@ -184,7 +184,7 @@ def sm2(card, rating):
 - [ ] **T9.2:** Dark Mode? (optional) — übersprungen (Cron-Job, optional)
 - [✓] **T9.3:** Alle Edge Cases testen — 23 Tests durchgeführt, 3 Bugs gefixed (escAttr, splice(-1), max topic length)
 - [✓] **T9.4:** Performance: DB-Indizes geprüft — 4 Indizes vorhanden, korrekt
-- [ ] **T9.5:** README.md schreiben
+- [✓] **T9.5:** README.md schreiben
 
 ---
 
@@ -215,6 +215,6 @@ Thema: {topic}
 
 ## Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzter Run:** 22.06.2026 15:53 (Cron)
-**Aktuelle Phase:** 9 (Polish)
-**Nächster Task:** T9.5
+**Letzter Run:** 22.06.2026 16:54 (Cron)
+**Aktuelle Phase:** 9 (Polish) — ABGESCHLOSSEN ✅
+**Nächster Task:** keiner — alle Tasks fertig
