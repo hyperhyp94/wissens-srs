@@ -21,7 +21,11 @@
     <header class="hidden md:block bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <h1 class="text-lg font-bold text-gray-900">📚 Wissens-SRS</h1>
-            <div class="flex gap-4" id="desktop-nav"></div>
+            <div class="flex gap-4" id="desktop-nav">
+                <button onclick="showPage('dashboard')" class="nav-btn text-sm font-medium text-primary" data-page="dashboard">🏠 Dashboard</button>
+                <button onclick="showPage('review')" class="nav-btn text-sm font-medium text-gray-400" data-page="review">📖 Lernen</button>
+                <button onclick="showPage('library')" class="nav-btn text-sm font-medium text-gray-400" data-page="library">📚 Bibliothek</button>
+            </div>
         </div>
     </header>
 
@@ -101,18 +105,18 @@
                     <p class="text-lg">Alle Karten gelernt!</p>
                     <p class="text-sm mt-1">Füge neue Themen hinzu oder warte auf fällige Wiederholungen.</p>
                 </div>
-                <div id="review-card" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div id="review-card" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
                     <div class="flex justify-between items-start mb-2">
                         <span id="review-level" class="text-xs font-medium px-2 py-1 rounded-full"></span>
                         <span id="review-counter" class="text-sm text-gray-400"></span>
                     </div>
                     <h2 id="review-topic" class="text-lg font-semibold text-gray-900 mb-4"></h2>
-                    <div id="review-explanation" class="text-gray-700 leading-relaxed mb-6"></div>
+                    <div id="review-explanation" class="text-gray-700 leading-relaxed mb-6 whitespace-pre-wrap"></div>
                     
                     <!-- Rating -->
                     <div class="border-t border-gray-100 pt-4">
                         <p class="text-sm text-gray-500 mb-3">Wie gut hast du dich erinnert?</p>
-                        <div class="grid grid-cols-6 gap-2" id="rating-buttons">
+                        <div class="grid grid-cols-3 min-[360px]:grid-cols-6 gap-1.5 min-[360px]:gap-2" id="rating-buttons">
                             <button onclick="rateCard(0)" class="rating-btn bg-red-50 hover:bg-red-100 text-red-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">0<br><span class="text-[10px]">vergessen</span></button>
                             <button onclick="rateCard(1)" class="rating-btn bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">1<br><span class="text-[10px]">kaum</span></button>
                             <button onclick="rateCard(2)" class="rating-btn bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-medium py-3 rounded-lg text-sm min-h-[44px]">2<br><span class="text-[10px]">unsicher</span></button>
@@ -158,9 +162,13 @@ function showPage(name) {
     
     // Update nav buttons
     document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('text-primary');
         if (b.dataset.page === name) b.classList.remove('text-gray-400');
-        else b.classList.add('text-gray-400');
+        else { b.classList.add('text-gray-400'); b.classList.remove('text-primary'); }
     });
+    // Set active color for desktop nav
+    const activeBtn = document.querySelector(`.nav-btn[data-page="${name}"]`);
+    if (activeBtn && window.innerWidth >= 768) activeBtn.classList.add('text-primary');
     
     // Load page data
     if (name === 'dashboard') loadDashboard();
@@ -201,7 +209,7 @@ async function loadDashboard() {
                     <p class="font-medium text-gray-900 text-sm">${escHtml(c.topic)}</p>
                     <p class="text-xs text-gray-400 mt-1">${levelLabel(c.level)} · ${c.repetitions}x wiederholt</p>
                 </div>
-                <button onclick="showPage('review')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg min-h-[36px]">Lernen</button>
+                <button onclick="showPage('review')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg min-h-[44px] flex items-center">Lernen</button>
             </div>
         `).join('');
     } else {
@@ -253,7 +261,7 @@ async function generateExplanations() {
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full ${l.badge}">${l.label}</span>
             </div>
-            <p class="text-sm text-gray-700 leading-relaxed mb-3">${escHtml(expl[l.key] || '')}</p>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">${escHtml(expl[l.key] || '')}</p>
             <button onclick="selectExplanation('${escAttr(topic)}', '${escAttr(expl[l.key])}', '${l.key}')"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg min-h-[44px] transition">
                 Diese Erklärung übernehmen 📥
