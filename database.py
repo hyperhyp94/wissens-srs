@@ -509,6 +509,29 @@ def get_all_languages():
     return [r['target_lang'] for r in rows]
 
 
+def get_existing_topics_for_tag(tag_name):
+    """Get all knowledge card titles/topics that have a given tag.
+    Used by Random mode to avoid suggesting the same topic twice."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT DISTINCT c.topic, c.title
+        FROM cards c
+        JOIN card_tags ct ON c.id = ct.card_id
+        JOIN tags t ON ct.tag_id = t.id
+        WHERE t.name = ?
+        ORDER BY c.created_at DESC
+    """, (tag_name.strip().lower(),)).fetchall()
+    conn.close()
+    topics = set()
+    for r in rows:
+        d = dict(r)
+        if d['title']:
+            topics.add(d['title'])
+        if d['topic']:
+            topics.add(d['topic'])
+    return sorted(topics)
+
+
 def get_all_categories():
     """UNION of tag names and distinct target_lang values for Random mode."""
     conn = get_db()

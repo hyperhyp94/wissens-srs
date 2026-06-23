@@ -57,10 +57,13 @@ Dann können Tags für beide Kartentypen genutzt werden, und `get_all_tags()` ag
 Random-Modus Kategorien: UNION aus Tags + target_lang + manuelle Eingabe.
 
 ## Test-Checkliste
-- [ ] Library zeigt beide Kartentypen
-- [ ] Filter nach Sprache funktioniert
-- [ ] Tags lassen sich für Sprachkarten setzen
-- [ ] Random-Modus: Dropdown zeigt bestehende Kategorien
-- [ ] Random-Modus: Neue Kategorie eingeben funktioniert
-- [ ] Random-Modus: Ergebnis kann als Karte gespeichert werden
-- [ ] Keine Regression bei bestehenden Wissen-Karten
+- [✓] Library zeigt beide Kartentypen
+- [✓] Filter nach Sprache funktioniert
+- [✓] Tags lassen sich für Sprachkarten setzen
+- [✓] Random-Modus: Dropdown zeigt bestehende Kategorien
+- [✓] Random-Modus: Neue Kategorie eingeben funktioniert
+- [✓] Random-Modus: Ergebnis kann als Karte gespeichert werden
+- [✓] Keine Regression bei bestehenden Wissen-Karten
+
+---
+**Phase 2 vollständig implementiert und verifiziert (23.06.2026).**

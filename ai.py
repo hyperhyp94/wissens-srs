@@ -39,6 +39,9 @@ RANDOM_PROMPT = """Wähle EIN konkretes Thema aus der Kategorie "{category}" und
 Das Thema soll spezifisch und interessant sein — kein generischer Oberbegriff.
 Wenn die Kategorie "Gemüse" ist, wähle z.B. "Radieschen" oder "Brokkoli", nicht "Gemüse allgemein".
 
+Folgende Themen existieren BEREITS in dieser Kategorie — wähle NIEMALS eines davon. Wähle stattdessen ein ANDERES Thema oder knüpfe mit einer VERTIEFUNG / einem verwandten Thema an eines der bestehenden an:
+{existing_topics}
+
 Gib deine Antwort NUR als JSON (kein Markdown, kein Code-Block):
 {{"topic": "Das gewählte Thema", "title": "Prägnanter Titel (max 6 Wörter)", "kurz": "...", "kompakt": "...", "ausfuehrlich": "..."}}"""
 
@@ -183,15 +186,19 @@ def generate_explanations(topic):
     return result
 
 
-def generate_random(category):
+def generate_random(category, existing_topics=None):
     """
     Zufälliges Thema aus einer Kategorie generieren + erklären.
+    existing_topics: Liste von Topic-Titeln die bereits existieren (wird im Prompt genannt).
     
     Returns:
         dict: {'topic': '...', 'title': '...', 'kurz': '...', 'kompakt': '...', 'ausfuehrlich': '...'}
         oder None bei Fehler
     """
-    result = _call_openrouter(RANDOM_PROMPT.format(category=category), max_tokens=1800)
+    banned = ""
+    if existing_topics:
+        banned = "Bereits vorhanden:\n" + "\n".join(f"- {t}" for t in existing_topics)
+    result = _call_openrouter(RANDOM_PROMPT.format(category=category, existing_topics=banned), max_tokens=1800)
     if result is None:
         return None
     

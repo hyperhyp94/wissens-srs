@@ -54,8 +54,11 @@ def api_random():
     if not category:
         return jsonify({"error": "Kategorie ist Pflicht"}), 400
     
+    from database import get_existing_topics_for_tag
+    existing = get_existing_topics_for_tag(category)
+    
     from ai import generate_random
-    result = generate_random(category)
+    result = generate_random(category, existing_topics=existing)
     if result is None:
         return jsonify({"error": "KI konnte kein Thema generieren"}), 503
     
