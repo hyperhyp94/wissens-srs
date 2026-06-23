@@ -272,6 +272,52 @@ def api_language_delete(card_id):
     return jsonify({"status": "deleted"})
 
 
+@app.route("/api/language/cards/<int:card_id>/tags", methods=["POST"])
+def api_language_add_tag(card_id):
+    data = request.get_json(silent=True) or {}
+    tag_name = (data.get("name") or "").strip().lower()
+    if not tag_name:
+        return jsonify({"error": "Tag-Name ist Pflicht"}), 400
+
+    from database import add_tag_to_language_card, get_language_card
+    if not get_language_card(card_id):
+        return jsonify({"error": "Sprachkarte nicht gefunden"}), 404
+
+    result = add_tag_to_language_card(card_id, tag_name)
+    if "error" in result:
+        return jsonify(result), 500
+    return jsonify(result), 201
+
+
+@app.route("/api/language/cards/<int:card_id>/tags/<int:tag_id>", methods=["DELETE"])
+def api_language_remove_tag(card_id, tag_id):
+    from database import remove_tag_from_language_card
+    remove_tag_from_language_card(card_id, tag_id)
+    return jsonify({"status": "deleted"})
+
+
+# ═══════════════════════════════════════════════════════════════
+# API: Library (merged)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/api/library")
+def api_library():
+    from database import get_all_entries
+    return jsonify(get_all_entries())
+
+
+@app.route("/api/languages")
+def api_languages():
+    from database import get_all_languages
+    return jsonify(get_all_languages())
+
+
+@app.route("/api/categories")
+def api_categories():
+    from database import get_all_categories
+    return jsonify(get_all_categories())
+
+
 # ═══════════════════════════════════════════════════════════════
 # API: Statistiken
 # ═══════════════════════════════════════════════════════════════

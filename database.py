@@ -128,11 +128,19 @@ def init_db():
             reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        CREATE TABLE IF NOT EXISTS language_card_tags (
+            card_id INTEGER NOT NULL REFERENCES language_cards(id) ON DELETE CASCADE,
+            tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            PRIMARY KEY(card_id, tag_id)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_cards_next_review ON cards(next_review);
         CREATE INDEX IF NOT EXISTS idx_cards_level ON cards(level);
         CREATE INDEX IF NOT EXISTS idx_explanations_hash ON explanations(topic_hash);
         CREATE INDEX IF NOT EXISTS idx_card_tags_card ON card_tags(card_id);
         CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag_id);
+        CREATE INDEX IF NOT EXISTS idx_lang_card_tags_card ON language_card_tags(card_id);
+        CREATE INDEX IF NOT EXISTS idx_lang_card_tags_tag ON language_card_tags(tag_id);
         CREATE INDEX IF NOT EXISTS idx_language_next_review ON language_cards(next_review);
         CREATE INDEX IF NOT EXISTS idx_review_log_card ON review_log(card_id, card_type);
     """)
@@ -227,9 +235,11 @@ def delete_card(card_id):
 def get_all_tags():
     conn = get_db()
     rows = conn.execute("""
-        SELECT t.id, t.name, COUNT(ct.card_id) as card_count
+        SELECT t.id, t.name,
+            COUNT(DISTINCT ct.card_id) + COUNT(DISTINCT lct.card_id) as card_count
         FROM tags t
         LEFT JOIN card_tags ct ON t.id = ct.tag_id
+        LEFT JOIN language_card_tags lct ON t.id = lct.tag_id
         GROUP BY t.id
         ORDER BY t.name
     """).fetchall()
@@ -262,6 +272,37 @@ def get_card_tags(card_id):
         SELECT t.id, t.name FROM tags t
         JOIN card_tags ct ON t.id = ct.tag_id
         WHERE ct.card_id = ?
+    """, (card_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ── Language Card Tags ───────────────────────────────────────────
+
+def add_tag_to_language_card(card_id, tag_name):
+    conn = get_db()
+    conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name.strip().lower(),))
+    tag = conn.execute("SELECT id FROM tags WHERE name = ?", (tag_name.strip().lower(),)).fetchone()
+    if not tag:
+        conn.close()
+        return {"error": "Tag konnte nicht angelegt werden"}
+    conn.execute("INSERT OR IGNORE INTO language_card_tags (card_id, tag_id) VALUES (?, ?)", (card_id, tag['id']))
+    conn.commit()
+    conn.close()
+    return {"id": tag['id'], "name": tag_name.strip().lower()}
+
+def remove_tag_from_language_card(card_id, tag_id):
+    conn = get_db()
+    conn.execute("DELETE FROM language_card_tags WHERE card_id = ? AND tag_id = ?", (card_id, tag_id))
+    conn.commit()
+    conn.close()
+
+def get_language_card_tags(card_id):
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT t.id, t.name FROM tags t
+        JOIN language_card_tags lct ON t.id = lct.tag_id
+        WHERE lct.card_id = ?
     """, (card_id,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -316,9 +357,21 @@ def get_language_card(card_id):
 
 def get_all_language_cards():
     conn = get_db()
-    rows = conn.execute("SELECT * FROM language_cards ORDER BY created_at DESC").fetchall()
+    rows = conn.execute("""
+        SELECT lc.*, GROUP_CONCAT(t.name, ',') as tag_names
+        FROM language_cards lc
+        LEFT JOIN language_card_tags lct ON lc.id = lct.card_id
+        LEFT JOIN tags t ON lct.tag_id = t.id
+        GROUP BY lc.id
+        ORDER BY lc.created_at DESC
+    """).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['tags'] = d.pop('tag_names').split(',') if d.get('tag_names') else []
+        result.append(d)
+    return result
 
 def get_due_language_cards():
     conn = get_db()
@@ -384,3 +437,86 @@ def get_stats():
         "language_total": lang_total,
         "language_due": lang_due
     }
+
+
+# ── Library (merged entries) ─────────────────────────────────────
+
+def get_all_entries():
+    """Merged list of knowledge and language cards sorted by created_at DESC."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT
+            'knowledge' as type,
+            c.id,
+            c.topic,
+            c.title,
+            c.explanation,
+            NULL as source_text,
+            NULL as target_text,
+            NULL as source_lang,
+            NULL as target_lang,
+            c.level,
+            c.created_at,
+            c.next_review,
+            c.repetitions,
+            c.review_count,
+            c.avg_rating,
+            GROUP_CONCAT(t.name, ',') as tag_names
+        FROM cards c
+        LEFT JOIN card_tags ct ON c.id = ct.card_id
+        LEFT JOIN tags t ON ct.tag_id = t.id
+        GROUP BY c.id
+        UNION ALL
+        SELECT
+            'language' as type,
+            lc.id,
+            NULL as topic,
+            NULL as title,
+            NULL as explanation,
+            lc.source_text,
+            lc.target_text,
+            lc.source_lang,
+            lc.target_lang,
+            lc.level,
+            lc.created_at,
+            lc.next_review,
+            lc.repetitions,
+            lc.review_count,
+            lc.avg_rating,
+            GROUP_CONCAT(t.name, ',') as tag_names
+        FROM language_cards lc
+        LEFT JOIN language_card_tags lct ON lc.id = lct.card_id
+        LEFT JOIN tags t ON lct.tag_id = t.id
+        GROUP BY lc.id
+        ORDER BY created_at DESC
+    """).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['tags'] = d.pop('tag_names').split(',') if d.get('tag_names') else []
+        result.append(d)
+    return result
+
+
+def get_all_languages():
+    """Unique target_lang values from language_cards."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT DISTINCT target_lang FROM language_cards ORDER BY target_lang"
+    ).fetchall()
+    conn.close()
+    return [r['target_lang'] for r in rows]
+
+
+def get_all_categories():
+    """UNION of tag names and distinct target_lang values for Random mode."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT name FROM tags
+        UNION
+        SELECT target_lang as name FROM language_cards
+        ORDER BY name
+    """).fetchall()
+    conn.close()
+    return [r['name'] for r in rows]

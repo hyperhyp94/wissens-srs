@@ -62,10 +62,18 @@
             <!-- Random Mode -->
             <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
                 <h2 class="font-semibold text-gray-900 mb-3">🎲 Zufälliges Thema</h2>
-                <div class="flex gap-2">
-                    <input type="text" id="category-input" class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="Kategorie (z.B. Gemüse, Physik, Tiere...)" onkeydown="if(event.key==='Enter')randomTopic()">
+                <div class="flex gap-2 mb-2">
+                    <select id="category-select" class="border rounded-lg px-3 py-2 flex-1 min-h-[44px] text-base" onchange="onCategorySelect()">
+                        <option value="">Kategorie wählen...</option>
+                        <option value="__new__">✏️ Neu eingeben...</option>
+                    </select>
                     <button onclick="randomTopic()" id="random-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg min-h-[44px] min-w-[44px]">🎲</button>
                 </div>
+                <div id="category-new-wrap" class="hidden mb-2">
+                    <input type="text" id="category-input" class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="Kategorie eingeben (z.B. Gemüse, Physik, Tiere...)" onkeydown="if(event.key==='Enter')randomTopic()">
+                </div>
+                <div id="random-error" class="hidden mt-2 bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 text-sm"></div>
+                <div id="random-loading" class="hidden mt-2 text-center py-4 text-gray-500"><span class="animate-pulse">🎲 Generiere Thema...</span></div>
                 <div id="random-results" class="hidden mt-4 space-y-3"></div>
             </div>
 
@@ -156,12 +164,20 @@
                 <h1 class="text-2xl font-bold text-gray-900">📚 Bibliothek</h1>
                 <span id="lib-count" class="text-sm text-gray-500"></span>
             </div>
-            <div class="flex gap-2 mb-4 flex-wrap">
-                <input type="text" id="lib-search" class="border rounded-lg px-3 py-2 flex-1 min-w-[180px] min-h-[44px] text-base" placeholder="🔍 Suchen..." oninput="renderLibrary()">
+            <div class="flex gap-1 mb-4">
+                <button onclick="setLibTab('all')" id="lib-tab-all" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-blue-600 text-white">Alle</button>
+                <button onclick="setLibTab('knowledge')" id="lib-tab-knowledge" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-gray-200 text-gray-600">Wissen</button>
+                <button onclick="setLibTab('language')" id="lib-tab-language" class="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] bg-gray-200 text-gray-600">Sprache</button>
+            </div>
+            <div class="flex gap-2 mb-3 flex-wrap">
+                <input type="text" id="lib-search" class="border rounded-lg px-3 py-2 flex-1 min-w-[140px] min-h-[44px] text-base" placeholder="🔍 Suchen..." oninput="renderLibrary()">
                 <select id="lib-sort" class="border rounded-lg px-3 py-2 min-h-[44px]" onchange="renderLibrary()">
                     <option value="date">Neueste</option>
                     <option value="review">Nächster Review</option>
                     <option value="level">Nach Level</option>
+                </select>
+                <select id="lib-lang" class="border rounded-lg px-3 py-2 min-h-[44px]" onchange="renderLibrary()">
+                    <option value="">Alle Sprachen</option>
                 </select>
             </div>
             <div id="lib-tag-filter" class="flex flex-wrap gap-2 mb-4"></div>
@@ -177,6 +193,7 @@
 // ═══════════════════════════════════════════════
 let dueCards = [], currentReviewIndex = 0, reviewMode = 'knowledge';
 let allCards = [], allTags = [], selectedTagFilter = null;
+let allLibraryEntries = [], libTab = 'all';
 const CHUNK = 20; let renderCount = CHUNK; let libraryObserver = null;
 let langLevel = 'einfach', langMode = 'translate', langData = null;
 let langDueCards = [], langReviewIndex = 0;
@@ -199,10 +216,10 @@ function showPage(name){
     document.getElementById('page-'+name).classList.add('active');
     document.querySelectorAll('.nav-btn-m').forEach(b=>b.classList.toggle('text-gray-400',b.dataset.page!==name));
 
-    if(name==='dashboard')loadDashboard();
+    if(name==='dashboard'){loadDashboard();loadCategoryOptions();}
     if(name==='review')loadReview();
     if(name==='language')loadLangCards();
-    if(name==='library'){loadCards();loadTags();}
+    if(name==='library')loadLibrary();
 }
 
 // ═══════════════════════════════════════════════
@@ -247,18 +264,36 @@ async function generateExplanations(){
     showExplanations(topic,res.data);
 }
 
+function onCategorySelect(){
+    const val=document.getElementById('category-select').value;
+    document.getElementById('category-new-wrap').classList.toggle('hidden',val!=='__new__');
+}
+
+async function loadCategoryOptions(){
+    const r=await api('/api/categories');
+    const cats=r.ok?r.data:[];
+    const sel=document.getElementById('category-select');
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Kategorie wählen...</option>'+
+        cats.map(c=>`<option value="${escAttr(c)}">${esc(c)}</option>`).join('')+
+        '<option value="__new__">✏️ Neu eingeben...</option>';
+    if(cur)sel.value=cur;
+}
+
 async function randomTopic(){
-    const cat=document.getElementById('category-input').value.trim();
+    const sel=document.getElementById('category-select');
+    let cat=sel.value;
+    if(cat==='__new__')cat=document.getElementById('category-input').value.trim();
     if(!cat)return;
     toggleUI('random','🎲...');
     const res=await api('/api/random',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat})});
     toggleUI('random','🎲',true);
     if(!res.ok){showError('random',res.data.error);return;}
     document.getElementById('random-results').classList.remove('hidden');
-    showExplanations(res.data.topic,res.data,'random-results');
+    showExplanations(res.data.topic,res.data,'random-results',cat);
 }
 
-function showExplanations(topic,data,containerId='gen-results'){
+function showExplanations(topic,data,containerId='gen-results',tag=null){
     const container=document.getElementById(containerId);
     container.innerHTML='';
     const levels=[
@@ -266,21 +301,23 @@ function showExplanations(topic,data,containerId='gen-results'){
         {key:'kompakt',label:'📖 Kompakt',color:'bg-blue-50 border-blue-200',badge:'bg-blue-100 text-blue-700'},
         {key:'ausfuehrlich',label:'🔬 Ausführlich',color:'bg-purple-50 border-purple-200',badge:'bg-purple-100 text-purple-700'}
     ];
+    const tagArg=tag?`,'${escAttr(tag)}'`:'';
     container.innerHTML=levels.map(l=>`
         <div class="bg-white rounded-xl shadow-sm border ${l.color} p-4 fade-in">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full ${l.badge}">${l.label}</span>
             </div>
             <p class="text-sm text-gray-700 leading-relaxed mb-3">${esc(data[l.key]||'')}</p>
-            <button onclick="saveCard('${escAttr(topic)}','${escAttr(data[l.key])}','${l.key}','${escAttr(data.title||topic)}')"
+            <button onclick="saveCard('${escAttr(topic)}','${escAttr(data[l.key])}','${l.key}','${escAttr(data.title||topic)}'${tagArg})"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg min-h-[44px]">📥 Übernehmen</button>
         </div>`).join('');
     container.classList.remove('hidden');
 }
 
-async function saveCard(topic,explanation,level,title){
+async function saveCard(topic,explanation,level,title,tag){
     const res=await api('/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,explanation,level,title})});
     if(res.ok){
+        if(tag)await api(`/api/cards/${res.data.id}/tags`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:tag})});
         document.getElementById('topic-input').value='';
         document.getElementById('gen-results').classList.add('hidden');
         loadDashboard();
@@ -417,7 +454,10 @@ async function loadLangCards(){
             <div class="flex-1 min-w-0 mr-2">
                 <p class="font-medium text-sm truncate">${esc(c.source_text)}</p>
                 <p class="text-xs text-blue-600 truncate">→ ${esc(c.target_text)}</p>
-                <span class="text-[10px] text-gray-400">${langLevelLabel(c.level)} · ${c.target_lang.toUpperCase()}</span>
+                <div class="flex flex-wrap gap-1 mt-1 items-center">
+                    <span class="text-[10px] text-gray-400">${langLevelLabel(c.level)} · ${c.target_lang.toUpperCase()}</span>
+                    ${(c.tags||[]).map(t=>`<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">${esc(t)}</span>`).join('')}
+                </div>
             </div>
         </div>`).join('');
 }
@@ -425,20 +465,28 @@ async function loadLangCards(){
 // ═══════════════════════════════════════════════
 // LIBRARY
 // ═══════════════════════════════════════════════
-async function loadCards(){
-    const r=await api('/api/cards');
-    allCards=r.ok?r.data:[];
-    document.getElementById('lib-count').textContent=`${allCards.length} Karten`;
+async function loadLibrary(){
+    const [r,tr,lr]=await Promise.all([api('/api/library'),api('/api/tags'),api('/api/languages')]);
+    allLibraryEntries=r.ok?r.data:[];
+    allTags=tr.ok?tr.data:[];
+    const langs=lr.ok?lr.data:[];
+    const langSel=document.getElementById('lib-lang');
+    langSel.innerHTML='<option value="">Alle Sprachen</option>'+
+        langs.map(l=>`<option value="${escAttr(l)}">${langName(l)}</option>`).join('');
+    document.getElementById('lib-count').textContent=`${allLibraryEntries.length} Karten`;
+    const filter=document.getElementById('lib-tag-filter');
+    if(allTags.length===0){filter.innerHTML='';}
+    else{filter.innerHTML='<span class="text-xs text-gray-400 mr-1 self-center">Tags:</span>'+
+        allTags.map(t=>`<button onclick="toggleTagFilter(${t.id})" class="tag-btn tag-${t.id} text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 min-h-[44px]">${esc(t.name)}</button>`).join('');}
     renderLibrary();
 }
 
-async function loadTags(){
-    const r=await api('/api/tags');
-    allTags=r.ok?r.data:[];
-    const filter=document.getElementById('lib-tag-filter');
-    if(allTags.length===0){filter.innerHTML='';return;}
-    filter.innerHTML='<span class="text-xs text-gray-400 mr-1 self-center">Tags:</span>'+
-        allTags.map(t=>`<button onclick="toggleTagFilter(${t.id})" class="tag-btn tag-${t.id} text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 min-h-[44px]">${t.name}</button>`).join('');
+function setLibTab(tab){
+    libTab=tab;
+    ['all','knowledge','language'].forEach(t=>{
+        document.getElementById('lib-tab-'+t).className='px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] '+(t===tab?'bg-blue-600 text-white':'bg-gray-200 text-gray-600');
+    });
+    renderLibrary();
 }
 
 function toggleTagFilter(tagId){
@@ -449,58 +497,96 @@ function toggleTagFilter(tagId){
     renderLibrary();
 }
 
+function renderLibCard(c){
+    const tags=(c.tags||[]).map(t=>`<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${esc(t)}</span>`).join('');
+    const addTag=`<button onclick="addLibTag('${c.type}',${c.id})" class="text-xs px-2 py-0.5 rounded border border-dashed border-gray-300 text-gray-400 hover:text-gray-600 min-h-[24px]">+Tag</button>`;
+    if(c.type==='knowledge'){
+        const lc=c.level==='kurz'?'bg-green-100 text-green-700':c.level==='kompakt'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700';
+        return`<div class="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
+            <div class="flex-1 min-w-0 mr-3">
+                <p class="font-medium text-gray-900 text-sm truncate">${esc(c.title||c.topic)}</p>
+                <div class="flex flex-wrap gap-1.5 mt-1 items-center">
+                    <span class="text-xs px-2 py-0.5 rounded-full ${lc}">${levelLabel(c.level)}</span>
+                    ${tags}${addTag}
+                    <span class="text-xs text-gray-400">⏰ ${fmtDate(c.next_review)}</span>
+                    <span class="text-xs text-gray-400">🔁 ${c.repetitions}x</span>
+                </div>
+            </div>
+            <button onclick="deleteLibraryCard('knowledge',${c.id})" class="text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Löschen">🗑️</button>
+        </div>`;
+    }else{
+        const lc=c.level==='einfach'?'bg-green-100 text-green-700':c.level==='mittel'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700';
+        const lb=`${(c.source_lang||'de').toUpperCase()} → ${(c.target_lang||'en').toUpperCase()}`;
+        return`<div class="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
+            <div class="flex-1 min-w-0 mr-3">
+                <span class="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-600">${lb}</span>
+                <p class="font-medium text-gray-900 text-sm mt-0.5">${esc(c.source_text)} → <span class="text-blue-600">${esc(c.target_text)}</span></p>
+                <div class="flex flex-wrap gap-1.5 mt-1 items-center">
+                    <span class="text-xs px-2 py-0.5 rounded-full ${lc}">${langLevelLabel(c.level)}</span>
+                    ${tags}${addTag}
+                    <span class="text-xs text-gray-400">⏰ ${fmtDate(c.next_review)}</span>
+                    <span class="text-xs text-gray-400">🔁 ${c.repetitions}x</span>
+                </div>
+            </div>
+            <button onclick="deleteLibraryCard('language',${c.id})" class="text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Löschen">🗑️</button>
+        </div>`;
+    }
+}
+
 function renderLibrary(resetCount){
     if(libraryObserver){libraryObserver.disconnect();libraryObserver=null;}
     if(resetCount!==false)renderCount=CHUNK;
     const list=document.getElementById('library-list'),empty=document.getElementById('library-empty');
-    let cards=[...allCards];
+    let cards=[...allLibraryEntries];
+    if(libTab==='knowledge')cards=cards.filter(c=>c.type==='knowledge');
+    else if(libTab==='language')cards=cards.filter(c=>c.type==='language');
+    const langF=document.getElementById('lib-lang').value;
+    if(langF)cards=cards.filter(c=>c.target_lang===langF);
     const q=document.getElementById('lib-search').value.toLowerCase();
-    if(q)cards=cards.filter(c=>(c.title||c.topic||c.explanation).toLowerCase().includes(q));
-    if(selectedTagFilter)cards=cards.filter(c=>c.tags&&c.tags.includes(allTags.find(t=>t.id===selectedTagFilter)?.name));
+    if(q)cards=cards.filter(c=>[c.title,c.topic,c.explanation,c.source_text,c.target_text].some(f=>f&&f.toLowerCase().includes(q)));
+    if(selectedTagFilter){const tn=allTags.find(t=>t.id===selectedTagFilter)?.name;cards=cards.filter(c=>c.tags&&c.tags.includes(tn));}
     const sort=document.getElementById('lib-sort').value;
     if(sort==='review')cards.sort((a,b)=>(a.next_review||'9999').localeCompare(b.next_review||'9999'));
     else if(sort==='level')cards.sort((a,b)=>a.level.localeCompare(b.level));
     else cards.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
     if(cards.length===0){list.innerHTML='';empty.classList.remove('hidden');return;}
     empty.classList.add('hidden');
-    const display=cards.slice(0,renderCount);
-    list.innerHTML=display.map(c=>`
-        <div class="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
-            <div class="flex-1 min-w-0 mr-3">
-                <p class="font-medium text-gray-900 text-sm truncate">${esc(c.title||c.topic)}</p>
-                <div class="flex flex-wrap gap-1.5 mt-1">
-                    <span class="text-xs px-2 py-0.5 rounded-full ${c.level==='kurz'?'bg-green-100 text-green-700':c.level==='kompakt'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700'}">${levelLabel(c.level)}</span>
-                    ${(c.tags||[]).map(t=>`<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${t}</span>`).join('')}
-                    <span class="text-xs text-gray-400">⏰ ${fmtDate(c.next_review)}</span>
-                    <span class="text-xs text-gray-400">🔁 ${c.repetitions}x</span>
-                </div>
-            </div>
-            <button onclick="deleteCard(${c.id})" class="text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Löschen">🗑️</button>
-        </div>`).join('');
+    list.innerHTML=cards.slice(0,renderCount).map(renderLibCard).join('');
     if(renderCount<cards.length){
         const sentinel=document.createElement('div');
-        sentinel.id='lib-sentinel';
-        sentinel.className='text-center py-4';
+        sentinel.id='lib-sentinel';sentinel.className='text-center py-4';
         sentinel.innerHTML=`<button onclick="loadMore()" class="text-sm text-blue-600 hover:text-blue-800 font-medium px-4 py-2 min-h-[44px]">📦 ${cards.length-renderCount} weitere laden...</button>`;
         list.appendChild(sentinel);
         if('IntersectionObserver' in window){
-            libraryObserver=new IntersectionObserver(function(e){
-                if(e[0].isIntersecting)loadMore();
-            },{rootMargin:'200px'});
+            libraryObserver=new IntersectionObserver(function(e){if(e[0].isIntersecting)loadMore();},{rootMargin:'200px'});
             libraryObserver.observe(sentinel);
         }
     }
 }
 
-function loadMore(){
-    renderCount+=CHUNK;
-    renderLibrary(false);
+function loadMore(){renderCount+=CHUNK;renderLibrary(false);}
+
+async function deleteLibraryCard(type,id){
+    if(!confirm('Karte löschen?'))return;
+    const endpoint=type==='language'?`/api/language/cards/${id}`:`/api/cards/${id}`;
+    const r=await api(endpoint,{method:'DELETE'});
+    if(r.ok){allLibraryEntries=allLibraryEntries.filter(c=>!(c.id===id&&c.type===type));renderLibrary();loadDashboard();}
 }
 
-async function deleteCard(id){
-    if(!confirm('Karte löschen?'))return;
-    const r=await api(`/api/cards/${id}`,{method:'DELETE'});
-    if(r.ok){allCards=allCards.filter(c=>c.id!==id);renderLibrary();loadDashboard();}
+async function addLibTag(type,id){
+    const name=prompt('Tag-Name:');
+    if(!name||!name.trim())return;
+    const endpoint=type==='language'?`/api/language/cards/${id}/tags`:`/api/cards/${id}/tags`;
+    const r=await api(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim()})});
+    if(r.ok){
+        const card=allLibraryEntries.find(c=>c.id===id&&c.type===type);
+        if(card){card.tags=card.tags||[];if(!card.tags.includes(r.data.name))card.tags.push(r.data.name);}
+        if(!allTags.find(t=>t.name===r.data.name))allTags.push({id:r.data.id,name:r.data.name,card_count:1});
+        const filter=document.getElementById('lib-tag-filter');
+        filter.innerHTML='<span class="text-xs text-gray-400 mr-1 self-center">Tags:</span>'+
+            allTags.map(t=>`<button onclick="toggleTagFilter(${t.id})" class="tag-btn tag-${t.id} text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 min-h-[44px]">${esc(t.name)}</button>`).join('');
+        renderLibrary(false);
+    }
 }
 
 // ═══════════════════════════════════════════════
@@ -510,6 +596,7 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
 function escAttr(s){return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function levelLabel(l){return l==='kurz'?'⚡ Kurz & Knapp':l==='kompakt'?'📖 Kompakt':'🔬 Ausführlich';}
 function langLevelLabel(l){return l==='einfach'?'Einfach':l==='mittel'?'Mittel':'Fortgeschritten';}
+function langName(code){return{en:'Englisch',fr:'Französisch',es:'Spanisch',it:'Italienisch',tr:'Türkisch',de:'Deutsch'}[code]||code.toUpperCase();}
 function fmtDate(d){if(!d)return'-';const t=new Date().toISOString().slice(0,10),tm=new Date(Date.now()+864e5).toISOString().slice(0,10);return d===t?'Heute':d===tm?'Morgen':new Date(d).toLocaleDateString('de-DE');}
 
 function toggleUI(prefix,label,done){
