@@ -214,11 +214,11 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 - [✓] **T5.3:** Sortierung (Erstelldatum / nächster Review / Level).
 - [✓] **T5.4:** Anzeige: Titel, Tags, Level, nächster Review je Eintrag.
 
-| ### Phase 6: Polish (PWA, Performance, Mobile)
-- [✓] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
-- [✓] **T6.2:** Lazy Loading / inkrementelles Rendern der Bibliothek (Chunks à 20, IntersectionObserver + Button).
-- [✓] **T6.3:** Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen. Fixes: Suchfeld auf min-h-[44px] erhöht, Tag-Buttons auf min-h-[44px] erhöht.
-- [ ] **T6.4:** Optional: CSS/JS minifizieren. Edge Cases & curl-Tests aller neuen Endpunkte.
+### Phase 6: Polish (PWA, Performance, Mobile)
+|- [✓] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
+|- [✓] **T6.2:** Lazy Loading / inkrementelles Rendern der Bibliothek (Chunks à 20, IntersectionObserver + Button).
+|- [✓] **T6.3:** Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen. Fixes: Suchfeld auf min-h-[44px] erhöht, Tag-Buttons auf min-h-[44px] erhöht.
+|- [✓] **T6.4:** Edge Cases & curl-Tests aller neuen Endpunkte. Alle 17+ Endpunkte durchgetestet: Validation (leere Bodies, fehlende Felder, zu kurz/lang, String statt Int, Bereichsüberschreitung), 404-Fälle, Duplikatsbehandlung, SM-2-Review-Zyklus. Alle Tests bestanden. CSS/JS-Minifizierung als optional verworfen (YAGNI — Inline-Styles ~200 Bytes, Tailwind CDN bereits minified).
 
 ---
 
@@ -229,6 +229,6 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 
 ## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T6.3 — Mobile-Test, Touch-Ziele, UI-Prüfung)
-**Aktuelle Phase:** 6 (Polish) — T6.3 abgeschlossen
-**Nächster Task:** T6.4 — Optional: CSS/JS minifizieren. Edge Cases & curl-Tests aller neuen Endpunkte.
+**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T6.4 — curl-Tests, alle Endpunkte verifiziert, Edge Cases geprüft)
+**Aktuelle Phase:** 6 (Polish) — T6.4 abgeschlossen
+**Nächster Task:** ✅ Alle Tasks abgeschlossen. Wissens-SRS ist komplett!
