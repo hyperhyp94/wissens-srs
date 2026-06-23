@@ -177,6 +177,7 @@
 // ═══════════════════════════════════════════════
 let dueCards = [], currentReviewIndex = 0, reviewMode = 'knowledge';
 let allCards = [], allTags = [], selectedTagFilter = null;
+const CHUNK = 20; let renderCount = CHUNK; let libraryObserver = null;
 let langLevel = 'einfach', langMode = 'translate', langData = null;
 let langDueCards = [], langReviewIndex = 0;
 
@@ -448,7 +449,9 @@ function toggleTagFilter(tagId){
     renderLibrary();
 }
 
-function renderLibrary(){
+function renderLibrary(resetCount){
+    if(libraryObserver){libraryObserver.disconnect();libraryObserver=null;}
+    if(resetCount!==false)renderCount=CHUNK;
     const list=document.getElementById('library-list'),empty=document.getElementById('library-empty');
     let cards=[...allCards];
     const q=document.getElementById('lib-search').value.toLowerCase();
@@ -460,7 +463,8 @@ function renderLibrary(){
     else cards.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
     if(cards.length===0){list.innerHTML='';empty.classList.remove('hidden');return;}
     empty.classList.add('hidden');
-    list.innerHTML=cards.map(c=>`
+    const display=cards.slice(0,renderCount);
+    list.innerHTML=display.map(c=>`
         <div class="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
             <div class="flex-1 min-w-0 mr-3">
                 <p class="font-medium text-gray-900 text-sm truncate">${esc(c.title||c.topic)}</p>
@@ -473,6 +477,24 @@ function renderLibrary(){
             </div>
             <button onclick="deleteCard(${c.id})" class="text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Löschen">🗑️</button>
         </div>`).join('');
+    if(renderCount<cards.length){
+        const sentinel=document.createElement('div');
+        sentinel.id='lib-sentinel';
+        sentinel.className='text-center py-4';
+        sentinel.innerHTML=`<button onclick="loadMore()" class="text-sm text-blue-600 hover:text-blue-800 font-medium px-4 py-2 min-h-[44px]">📦 ${cards.length-renderCount} weitere laden...</button>`;
+        list.appendChild(sentinel);
+        if('IntersectionObserver' in window){
+            libraryObserver=new IntersectionObserver(function(e){
+                if(e[0].isIntersecting)loadMore();
+            },{rootMargin:'200px'});
+            libraryObserver.observe(sentinel);
+        }
+    }
+}
+
+function loadMore(){
+    renderCount+=CHUNK;
+    renderLibrary(false);
 }
 
 async function deleteCard(id){
