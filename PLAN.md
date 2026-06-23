@@ -229,6 +229,6 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 
 ## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: Server-Restart nach Gateway-Neustart, alle Endpunkte OK)
+**Letzte Aktualisierung:** 23.06.2026 (Cron-Run #2: Server-Restart, alle Endpunkte OK, kein neuer Task nötig — Projekt abgeschlossen)
 **Aktuelle Phase:** 6 (Polish) — T6.4 abgeschlossen
 **Nächster Task:** ✅ Alle Tasks abgeschlossen. Wissens-SRS ist komplett!
