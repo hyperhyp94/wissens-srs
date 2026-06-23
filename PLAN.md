@@ -217,7 +217,7 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 | ### Phase 6: Polish (PWA, Performance, Mobile)
 - [✓] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
 - [✓] **T6.2:** Lazy Loading / inkrementelles Rendern der Bibliothek (Chunks à 20, IntersectionObserver + Button).
-- [ ] **T6.3:** Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen.
+- [✓] **T6.3:** Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen. Fixes: Suchfeld auf min-h-[44px] erhöht, Tag-Buttons auf min-h-[44px] erhöht.
 - [ ] **T6.4:** Optional: CSS/JS minifizieren. Edge Cases & curl-Tests aller neuen Endpunkte.
 
 ---
@@ -229,6 +229,6 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 
 ## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T6.2 — Lazy Loading / inkrementelles Rendern)
-**Aktuelle Phase:** 6 (PWA) — T6.2 abgeschlossen
-**Nächster Task:** T6.3 — Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen
+**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T6.3 — Mobile-Test, Touch-Ziele, UI-Prüfung)
+**Aktuelle Phase:** 6 (Polish) — T6.3 abgeschlossen
+**Nächster Task:** T6.4 — Optional: CSS/JS minifizieren. Edge Cases & curl-Tests aller neuen Endpunkte.
