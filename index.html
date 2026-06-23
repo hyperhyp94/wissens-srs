@@ -215,6 +215,11 @@ function showPage(name){
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     document.getElementById('page-'+name).classList.add('active');
     document.querySelectorAll('.nav-btn-m').forEach(b=>b.classList.toggle('text-gray-400',b.dataset.page!==name));
+    document.querySelectorAll('.nav-btn-d').forEach(b=>{
+        b.classList.toggle('bg-blue-600',b.dataset.page===name);
+        b.classList.toggle('text-white',b.dataset.page===name);
+        b.classList.toggle('text-gray-600',b.dataset.page!==name);
+    });
 
     if(name==='dashboard'){loadDashboard();loadCategoryOptions();}
     if(name==='review')loadReview();
