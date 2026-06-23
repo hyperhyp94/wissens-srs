@@ -215,7 +215,7 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 - [✓] **T5.4:** Anzeige: Titel, Tags, Level, nächster Review je Eintrag.
 
 ### Phase 6: Polish (PWA, Performance, Mobile)
-- [ ] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
+- [✓] **T6.1:** `manifest.json` + `sw.js` (App-Shell-Cache), Registrierung in `index.html`.
 - [ ] **T6.2:** Lazy Loading / inkrementelles Rendern der Bibliothek.
 - [ ] **T6.3:** Mobile-Test (375px), Touch-Ziele ≥ 44px, neue UI-Elemente prüfen.
 - [ ] **T6.4:** Optional: CSS/JS minifizieren. Edge Cases & curl-Tests aller neuen Endpunkte.
@@ -229,6 +229,6 @@ Indizes ergänzen: `idx_card_tags_card`, `idx_card_tags_tag`, `idx_language_next
 
 ## 7. Fortschritt (wird vom Cron-Job aktualisiert)
 
-**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T3.1 verbessert — Few-Shot-Beispiele, Translate-Richtung korrigiert)
+**Letzte Aktualisierung:** 23.06.2026 (Cron-Run: T6.1 — Service Worker + PWA-Registrierung)
 **Aktuelle Phase:** 6 (PWA) — Phasen 0–5 abgeschlossen
-**Nächster Task:** T6.1 — `sw.js` Service Worker für PWA erstellen
+**Nächster Task:** T6.2 — Lazy Loading / inkrementelles Rendern der Bibliothek

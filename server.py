@@ -16,6 +16,14 @@ init_db()
 def index():
     return send_from_directory(".", "index.html")
 
+@app.route("/sw.js")
+def sw_js():
+    return send_from_directory(".", "sw.js")
+
+@app.route("/manifest.json")
+def manifest_json():
+    return send_from_directory(".", "manifest.json")
+
 
 # ═══════════════════════════════════════════════════════════════
 # API: Wissens-Erklärungen generieren
